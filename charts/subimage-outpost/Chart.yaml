@@ -1,0 +1,14 @@
+apiVersion: v2
+name: subimage-outpost
+description: Deploy SubImage Outpost with Tailscale in restrictive Kubernetes environments
+type: application
+version: 0.1.0
+appVersion: "0.0.8"
+keywords:
+  - tailscale
+  - proxy
+  - outpost
+  - security
+maintainers:
+  - name: SubImage
+    url: https://subimage.io

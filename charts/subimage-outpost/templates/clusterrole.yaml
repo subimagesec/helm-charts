@@ -1,0 +1,32 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "subimage-outpost.fullname" . }}
+  labels:
+    {{- include "subimage-outpost.labels" . | nindent 4 }}
+rules:
+{{- if .Values.rbac.readAll }}
+# Read-only access to all resources
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]
+# Access to non-resource URLs (API discovery and health endpoints)
+# Note: These paths allow API discovery but do NOT grant access to resources themselves
+- nonResourceURLs: ["/", "/api", "/api/*", "/apis", "/apis/*", "/version", "/healthz", "/livez", "/readyz", "/openapi", "/openapi/*", "/swagger.json", "/swagger-2.0.0.pb-v1", "/metrics"]
+  verbs: ["get"]
+{{- else }}
+# Granular permissions based on resourceGroups
+{{- range .Values.rbac.resourceGroups }}
+- apiGroups:
+  {{- toYaml .apiGroups | nindent 4 }}
+  resources:
+  {{- toYaml .resources | nindent 4 }}
+  verbs:
+  {{- toYaml .verbs | nindent 4 }}
+{{- end }}
+# Access to non-resource URLs (API discovery endpoints)
+- nonResourceURLs: ["/", "/api", "/api/*", "/apis", "/apis/*", "/version", "/healthz", "/openapi/*"]
+  verbs: ["get"]
+{{- end }}
+{{- end }}

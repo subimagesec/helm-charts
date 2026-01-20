@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "subimage-outpost.fullname" . }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "subimage-outpost.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "subimage-outpost.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "subimage-outpost.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ .Values.serviceAccount.name | default (include "subimage-outpost.fullname" .) }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: outpost
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        env:
+        - name: TENANT_ID
+          value: {{ required "outpost.tenantId is required" .Values.outpost.tenantId | quote }}
+        - name: ENVIRONMENT
+          value: {{ .Values.outpost.environment | quote }}
+        - name: NAME
+          value: {{ .Values.outpost.name | quote }}
+        - name: PROXY_TARGET
+          value: {{ .Values.outpost.proxyTarget | quote }}
+        - name: VERIFY_TLS
+          value: {{ .Values.outpost.verifyTls | quote }}
+        {{- if .Values.outpost.proxyHost }}
+        - name: PROXY_HOST
+          value: {{ .Values.outpost.proxyHost | quote }}
+        {{- end }}
+        {{- if .Values.rbac.create }}
+        - name: BEARER_TOKEN_PATH
+          value: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        {{- end }}
+        - name: TAILSCALE_AUTHKEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "subimage-outpost.fullname" . }}-secrets
+              key: TAILSCALE_AUTHKEY
+        {{- if .Values.proxy.enabled }}
+        - name: HTTP_PROXY
+          value: {{ .Values.proxy.httpProxy | quote }}
+        - name: HTTPS_PROXY
+          value: {{ .Values.proxy.httpsProxy | quote }}
+        - name: ALL_PROXY
+          value: {{ .Values.proxy.allProxy | quote }}
+        - name: NO_PROXY
+          value: {{ .Values.proxy.noProxy | quote }}
+        {{- end }}
+        {{- if .Values.livenessProbe.enabled }}
+        livenessProbe:
+          exec:
+            command:
+              {{- toYaml .Values.livenessProbe.exec.command | nindent 14 }}
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.readinessProbe.enabled }}
+        readinessProbe:
+          exec:
+            command:
+              {{- toYaml .Values.readinessProbe.exec.command | nindent 14 }}
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+        {{- end }}

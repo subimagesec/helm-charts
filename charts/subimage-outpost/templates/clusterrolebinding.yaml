@@ -1,0 +1,16 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "subimage-outpost.fullname" . }}
+  labels:
+    {{- include "subimage-outpost.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "subimage-outpost.fullname" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.serviceAccount.name | default (include "subimage-outpost.fullname" .) }}
+  namespace: {{ .Values.namespace.name }}
+{{- end }}

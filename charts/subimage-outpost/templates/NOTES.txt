@@ -1,0 +1,98 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your SubImage Outpost has been deployed to namespace: {{ .Values.namespace.name }}
+
+📊 Deployment Status:
+  Release Name: {{ .Release.Name }}
+  Chart Version: {{ .Chart.Version }}
+  Image Version: {{ .Values.image.tag }}
+  {{- if .Values.outpost.tenantId }}
+  Tenant ID: {{ .Values.outpost.tenantId }}
+  Tailscale Hostname: {{ printf "%s-%s-outpost" .Values.outpost.tenantId .Values.outpost.name }}
+  {{- end }}
+  Proxy Target: {{ .Values.outpost.proxyTarget }}
+
+🔍 Check deployment status:
+  kubectl get pods -n {{ .Values.namespace.name }} -l app.kubernetes.io/name={{ include "subimage-outpost.name" . }}
+
+📝 View logs:
+  kubectl logs -n {{ .Values.namespace.name }} -l app.kubernetes.io/name={{ include "subimage-outpost.name" . }} -f
+
+🔗 Verify Tailscale connection:
+  kubectl exec -n {{ .Values.namespace.name }} deployment/{{ include "subimage-outpost.fullname" . }} -- tailscale status
+
+{{- if .Values.outpost.tenantId }}
+🌐 Once connected, access via Tailscale:
+  http://{{ printf "%s-%s-outpost" .Values.outpost.tenantId .Values.outpost.name }}.tail<network-id>.ts.net/
+{{- end }}
+
+{{- if not .Values.outpost.tenantId }}
+
+⚠️  ERROR: Tenant ID is required!
+  Set with: --set outpost.tenantId="your-tenant-id"
+{{- end }}
+
+{{- if not .Values.outpost.authKey }}
+
+⚠️  WARNING: No Tailscale OAuth client secret provided!
+  Update the secret with your OAuth client secret (provided by SubImage):
+
+  kubectl create secret generic {{ include "subimage-outpost.fullname" . }}-secrets \
+    -n {{ .Values.namespace.name }} \
+    --from-literal=TAILSCALE_AUTHKEY='tskey-client-xxxxx-xxxxxxxxxxxxxx' \
+    --dry-run=client -o yaml | kubectl apply -f -
+
+  Then restart the deployment:
+  kubectl rollout restart deployment/{{ include "subimage-outpost.fullname" . }} -n {{ .Values.namespace.name }}
+{{- end }}
+
+{{- if .Values.proxy.enabled }}
+
+🔧 Corporate proxy enabled:
+  HTTP_PROXY: {{ .Values.proxy.httpProxy }}
+  HTTPS_PROXY: {{ .Values.proxy.httpsProxy }}
+{{- end }}
+
+{{- if .Values.networkPolicy.enabled }}
+
+🔒 NetworkPolicy is enabled for Tailscale connectivity
+{{- end }}
+
+{{- if .Values.rbac.create }}
+
+🔐 RBAC Configuration:
+  {{- if .Values.rbac.readAll }}
+  ✅ ClusterRole created with READ-ONLY access to ALL resources
+  {{- else }}
+  ✅ ClusterRole created with granular permissions
+  {{- end }}
+  
+  ServiceAccount: {{ .Values.serviceAccount.name | default (include "subimage-outpost.fullname" .) }}
+  ClusterRole: {{ include "subimage-outpost.fullname" . }}
+  ClusterRoleBinding: {{ include "subimage-outpost.fullname" . }}
+  
+  🧪 Test API access from pod:
+    kubectl exec -n {{ .Values.namespace.name }} deployment/{{ include "subimage-outpost.fullname" . }} -- \
+      curl -sk -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+      https://kubernetes.default.svc/api/v1/namespaces
+  
+  {{- if .Values.rbac.readAll }}
+  ⚠️  Security Note: The outpost has cluster-wide READ access. This is required
+      for comprehensive security scanning but may be restricted in some environments.
+      To use granular permissions, set rbac.readAll=false and configure rbac.resourceGroups.
+  {{- end }}
+{{- else }}
+
+⚠️  RBAC is disabled!
+  If accessing the Kubernetes API, requests will fail with 401/403 errors.
+  Enable with: --set rbac.create=true
+{{- end }}
+
+💡 Troubleshooting:
+  - If pod is pending: kubectl describe pod -n {{ .Values.namespace.name }} -l app.kubernetes.io/name={{ include "subimage-outpost.name" . }}
+  - If ImagePullBackOff: Verify ECR access and image pull secrets
+  - If Tailscale fails: Check NetworkPolicy allows egress to TCP 443, UDP 3478, UDP 41641
+
+📚 Documentation: See README.md for complete configuration options
+
+For support: https://github.com/subimage/issues
