@@ -9,7 +9,6 @@ Deploy SubImage Outpost with Tailscale in restrictive Kubernetes environments. T
 - [Installation](#installation)
   - [Before You Begin](#before-you-begin)
   - [Quick Start](#quick-start)
-  - [Installation from ECR](#installation-from-ecr)
 - [Configuration](#configuration)
   - [Required Values](#required-values)
   - [Common Configurations](#common-configurations)
@@ -38,7 +37,6 @@ SubImage Outpost creates a secure proxy using Tailscale to access private Kubern
 
 - Kubernetes 1.21+
 - Helm 3.0+
-- Access to ECR repository: `482544513907.dkr.ecr.us-east-1.amazonaws.com/subimage-shared`
 - Tailscale OAuth client secret (provided by SubImage)
 
 ## Installation
@@ -54,7 +52,6 @@ SubImage Outpost creates a secure proxy using Tailscale to access private Kubern
 2. **Tenant ID** - Your tenant identifier (provided by SubImage)
    - Example: `veriff`, `acme`, `customer-name`
    - Used for Tailscale hostname and ACL tags
-3. **ECR Access** - Ensure your cluster can pull from `482544513907.dkr.ecr.us-east-1.amazonaws.com`
 
 ### Quick Start
 
@@ -86,28 +83,6 @@ helm install my-outpost ./subimage-outpost -f my-values.yaml
 **Important Notes:**
 - The Tailscale hostname will be: `{tenantId}-{name}-outpost` (e.g., `veriff-subimage-outpost`)
 - The default `name` is `subimage` - only override if deploying multiple outposts for the same tenant
-
-### Installation from ECR
-
-If you need to authenticate with ECR:
-
-```bash
-# Authenticate with ECR
-aws ecr get-login-password --region us-east-1 | \
-  helm registry login --username AWS --password-stdin \
-  482544513907.dkr.ecr.us-east-1.amazonaws.com
-
-# Create image pull secret
-kubectl create secret docker-registry ecr-secret \
-  --docker-server=482544513907.dkr.ecr.us-east-1.amazonaws.com \
-  --docker-username=AWS \
-  --docker-password=$(aws ecr get-login-password --region us-east-1)
-
-# Install with image pull secret
-helm install my-outpost ./subimage-outpost \
-  -f my-values.yaml \
-  --set imagePullSecrets[0].name=ecr-secret
-```
 
 ## Configuration
 
@@ -304,17 +279,6 @@ For proxying to services that require authentication beyond Kubernetes API (whic
 
 **Note:** When `rbac.create: true`, `BEARER_TOKEN_PATH` is automatically set to the Kubernetes ServiceAccount token path. For custom services, you'll need to disable RBAC (`rbac.create: false`) and provide your own authentication mechanism.
 
-#### 8. ECR Authentication
-
-The chart always uses the shared ECR registry: `482544513907.dkr.ecr.us-east-1.amazonaws.com/subimage-shared`
-
-If you need to provide image pull secrets for ECR access:
-
-```yaml
-imagePullSecrets:
-  - name: ecr-secret
-```
-
 ### All Configuration Options
 
 See [values.yaml](values.yaml) for complete configuration options including:
@@ -417,8 +381,8 @@ kubectl describe pod -n subimage-outpost -l app.kubernetes.io/name=subimage-outp
 
 ### ImagePullBackOff
 
-**Symptom**: Cannot pull image from ECR
-**Solution**: Ensure ECR permissions are configured and image pull secret is created (see Installation section)
+**Symptom**: Cannot pull image from ghcr.io
+**Solution**: The image is public and should be accessible without authentication. Check network connectivity to ghcr.io and verify the image tag exists.
 
 ### No Logs Visible
 

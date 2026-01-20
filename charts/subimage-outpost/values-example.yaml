@@ -29,11 +29,11 @@ outpost:
   # NOTE: Do not add "?ephemeral=true" - the chart does this automatically
   authKey: "tskey-client-xxxxx-xxxxxxxxxxxxxx"
 
-# Image configuration - DO NOT CHANGE
-# Always use the shared ECR registry
+# Image configuration
+# Uses the official SubImage Outpost image from GitHub Container Registry
 image:
-  repository: 482544513907.dkr.ecr.us-east-1.amazonaws.com/subimage-shared
-  tag: "0.0.8"
+  repository: ghcr.io/subimagesec/subimage-outpost
+  tag: "1.0.0"
   pullPolicy: IfNotPresent
 
 # OPTIONAL: Corporate proxy configuration
