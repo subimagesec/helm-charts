@@ -1,0 +1,28 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "subimage-outpost.fullname" . }}
+  labels:
+    {{- include "subimage-outpost.labels" . | nindent 4 }}
+rules:
+# Core resources
+- apiGroups: [""]
+  resources: ["namespaces", "pods", "services", "serviceaccounts"]
+  verbs: ["get", "list"]
+# Secrets - list only, cannot read values
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["list"]
+# ConfigMaps - for aws-auth
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get"]
+# RBAC resources
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+  verbs: ["get", "list"]
+# Non-resource URLs (API discovery and health endpoints)
+- nonResourceURLs: ["/", "/api", "/apis", "/version", "/healthz"]
+  verbs: ["get"]
+{{- end }}

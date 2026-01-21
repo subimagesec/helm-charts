@@ -1,0 +1,97 @@
+# Example values for SubImage Outpost
+# Copy this file and customize for your environment
+
+# REQUIRED: Basic outpost configuration
+outpost:
+  # REQUIRED: Tenant ID (provided by SubImage)
+  # Used for Tailscale hostname and ACL tags
+  # Example: "acme", "customer-id"
+  tenantId: "acme"
+
+  # OPTIONAL: Outpost name (for multiple outposts per tenant)
+  # Default: "subimage"
+  # Example: "eks", "gke", "rancher" (if you have multiple K8s clusters)
+  name: "eks-test"
+
+  # REQUIRED: Target URL to proxy (typically the Kubernetes API)
+  proxyTarget: "https://kubernetes.default.svc"
+
+  # REQUIRED: Verify TLS certificates
+  # Default: false (Kubernetes API typically uses self-signed certificates)
+  # Set to true only if your target has a valid public certificate
+  verifyTls: false
+
+  # OPTIONAL: Override Host header sent to target
+  # Leave empty unless your reverse proxy requires a specific Host header
+  # proxyHost: "api.internal.company.com"
+
+  # REQUIRED: Tailscale OAuth client secret (provided by SubImage)
+  # NOTE: Do not add "?ephemeral=true" - the chart does this automatically
+  authKey: "tskey-client-xxxxx-xxxxxxxxxxxxxx"
+
+# Image configuration
+# Uses the official SubImage Outpost image from GitHub Container Registry
+image:
+  repository: ghcr.io/subimagesec/subimage-outpost
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+# OPTIONAL: Corporate proxy configuration
+# Uncomment and configure if behind a corporate proxy
+# proxy:
+#   enabled: true
+#   httpProxy: "http://proxy.company.com:8080"
+#   httpsProxy: "http://proxy.company.com:8080"
+#   allProxy: "http://proxy.company.com:8080"
+#   noProxy: "localhost,127.0.0.1,.svc,.cluster.local"
+
+# OPTIONAL: Node placement
+# Uncomment to schedule on specific nodes
+# nodeSelector:
+#   node.kubernetes.io/purpose: outpost
+#   kubernetes.io/arch: amd64
+
+# OPTIONAL: Tolerations for tainted nodes
+# Uncomment to allow scheduling on tainted nodes
+# tolerations:
+#   - key: "dedicated"
+#     operator: "Equal"
+#     value: "outpost"
+#     effect: "NoSchedule"
+
+# OPTIONAL: Pod Security Standards
+# Change if your cluster requires different PSS levels
+namespace:
+  create: true
+  name: "subimage-outpost"
+  podSecurity:
+    enforce: "baseline"  # Options: privileged, baseline, restricted
+    audit: "baseline"
+    warn: "baseline"
+
+# OPTIONAL: Resource limits
+# Adjust based on your cluster capacity
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+# OPTIONAL: NetworkPolicy
+# Disable if your CNI doesn't support NetworkPolicy
+networkPolicy:
+  enabled: true
+
+# OPTIONAL: RBAC for Kubernetes API access
+# Required if proxyTarget is the Kubernetes API
+rbac:
+  create: true
+  # Read-only access to all resources (recommended)
+  readAll: true
+  # For granular permissions, set readAll: false and configure resourceGroups
+  # resourceGroups:
+  #   - apiGroups: [""]
+  #     resources: ["pods", "services", "nodes"]
+  #     verbs: ["get", "list", "watch"]

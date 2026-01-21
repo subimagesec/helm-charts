@@ -1,0 +1,17 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "subimage-outpost.fullname" . }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "subimage-outpost.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "subimage-outpost.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    {{- toYaml .Values.networkPolicy.egressRules | nindent 4 }}
+{{- end }}

@@ -1,0 +1,190 @@
+# Default values for subimage-outpost
+
+# Override the chart name
+nameOverride: ""
+# Override the full release name
+fullnameOverride: ""
+
+# Outpost configuration
+outpost:
+  # REQUIRED: Tenant ID (provided by SubImage)
+  # Used for Tailscale hostname and ACL tags
+  # Example: "acme", "customer-id"
+  tenantId: ""
+
+  # Internal: SubImage environment - DO NOT CHANGE
+  # This is SubImage's deployment environment, not your environment
+  # Should always be "prod" unless explicitly instructed by SubImage support
+  environment: "prod"
+
+  # OPTIONAL: Outpost name (for multiple outposts per tenant)
+  # Used to differentiate multiple outposts for the same tenant
+  # Default: "subimage"
+  # Example: "eks", "gke", "rancher" (if you have multiple K8s clusters)
+  name: "subimage"
+
+  # REQUIRED: Target URL to proxy (e.g., https://kubernetes.default.svc)
+  proxyTarget: "https://kubernetes.default.svc"
+
+  # REQUIRED: Verify TLS certificates (set to false for self-signed certs)
+  verifyTls: true
+
+  # OPTIONAL: Override Host header sent to target
+  # Useful for reverse proxies that require specific Host headers
+  # Leave empty to use the original Host header from the request
+  proxyHost: ""
+
+  # REQUIRED: Tailscale OAuth client secret
+  # Provided by SubImage - this is NOT an ephemeral auth key
+  # The OAuth client is created via Terraform and scoped to your tenant
+  # NOTE: The chart automatically appends "?ephemeral=true" to ensure
+  # the Tailscale node is removed when the pod is deleted
+  authKey: ""
+
+# Image configuration
+image:
+  repository: ghcr.io/subimagesec/subimage-outpost
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+# Image pull secrets (not required - image is public)
+imagePullSecrets: []
+
+# Namespace configuration
+namespace:
+  # Create namespace or use existing
+  create: true
+  name: "subimage-outpost"
+
+  # Pod Security Standards
+  # Set to "privileged" to bypass most restrictions
+  # Options: privileged, baseline, restricted
+  podSecurity:
+    enforce: "baseline"
+    audit: "baseline"
+    warn: "baseline"
+
+  # Labels for service mesh exemption
+  labels:
+    # Disable Istio sidecar injection
+    istio-injection: disabled
+    # Disable Linkerd injection
+    linkerd.io/inject: disabled
+    # Mark as infrastructure namespace
+    subimage.io/outpost: "true"
+
+# Resource limits and requests
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+# Network Policy configuration
+networkPolicy:
+  # Enable NetworkPolicy to allow Tailscale egress
+  enabled: true
+
+  # Allow egress to Tailscale control plane and DERP servers
+  egressRules:
+    # Tailscale control plane (HTTPS)
+    - to:
+      - ipBlock:
+          cidr: 0.0.0.0/0
+      ports:
+      - protocol: TCP
+        port: 443
+    # STUN/DERP (UDP)
+    - to:
+      - ipBlock:
+          cidr: 0.0.0.0/0
+      ports:
+      - protocol: UDP
+        port: 3478
+      - protocol: UDP
+        port: 41641
+    # DNS
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: kube-system
+      ports:
+      - protocol: UDP
+        port: 53
+    # Kubernetes API (for proxy target)
+    - to:
+      - namespaceSelector: {}
+      ports:
+      - protocol: TCP
+        port: 443
+      - protocol: TCP
+        port: 6443
+
+# Proxy configuration for corporate environments
+proxy:
+  enabled: false
+  httpProxy: ""
+  httpsProxy: ""
+  allProxy: ""
+  noProxy: "localhost,127.0.0.1,.svc,.cluster.local"
+
+# Pod annotations
+podAnnotations: {}
+  # Uncomment only if AppArmor interferes (violates baseline PSS on EKS)
+  # container.apparmor.security.beta.kubernetes.io/outpost: "unconfined"
+
+# Node selection
+nodeSelector: {}
+
+# Tolerations for tainted nodes
+tolerations: []
+# Example: Allow scheduling on nodes with specific taints
+# - key: "dedicated"
+#   operator: "Equal"
+#   value: "outpost"
+#   effect: "NoSchedule"
+
+# Affinity rules
+affinity: {}
+
+# Liveness probe configuration
+livenessProbe:
+  enabled: true
+  exec:
+    command: ["test", "-S", "/var/run/tailscale/tailscaled.sock"]
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness probe configuration
+readinessProbe:
+  enabled: true
+  exec:
+    command: ["test", "-S", "/var/run/tailscale/tailscaled.sock"]
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Service account
+serviceAccount:
+  # Create service account for the outpost
+  create: true
+  # Name of the service account (defaults to release fullname if empty)
+  name: ""
+  # Annotations to add to the service account
+  annotations: {}
+
+# RBAC configuration for Kubernetes API access
+rbac:
+  # Create ClusterRole and ClusterRoleBinding
+  create: true
+
+# Security context (already removed NET_ADMIN requirement)
+securityContext: {}
+  # capabilities:
+  #   add: []
+  #   drop: []
