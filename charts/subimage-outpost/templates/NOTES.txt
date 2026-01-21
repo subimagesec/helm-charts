@@ -26,26 +26,6 @@ Your SubImage Outpost has been deployed to namespace: {{ .Values.namespace.name 
   http://{{ printf "%s-%s-outpost" .Values.outpost.tenantId .Values.outpost.name }}.tail<network-id>.ts.net/
 {{- end }}
 
-{{- if not .Values.outpost.tenantId }}
-
-⚠️  ERROR: Tenant ID is required!
-  Set with: --set outpost.tenantId="your-tenant-id"
-{{- end }}
-
-{{- if not .Values.outpost.authKey }}
-
-⚠️  WARNING: No Tailscale OAuth client secret provided!
-  Update the secret with your OAuth client secret (provided by SubImage):
-
-  kubectl create secret generic {{ include "subimage-outpost.fullname" . }}-secrets \
-    -n {{ .Values.namespace.name }} \
-    --from-literal=TAILSCALE_AUTHKEY='tskey-client-xxxxx-xxxxxxxxxxxxxx' \
-    --dry-run=client -o yaml | kubectl apply -f -
-
-  Then restart the deployment:
-  kubectl rollout restart deployment/{{ include "subimage-outpost.fullname" . }} -n {{ .Values.namespace.name }}
-{{- end }}
-
 {{- if .Values.proxy.enabled }}
 
 🔧 Corporate proxy enabled:

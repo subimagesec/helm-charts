@@ -23,6 +23,6 @@ rules:
   resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
   verbs: ["get", "list"]
 # Non-resource URLs (API discovery and health endpoints)
-- nonResourceURLs: ["/version", "/healthz"]
+- nonResourceURLs: ["/", "/api", "/apis", "/version", "/healthz"]
   verbs: ["get"]
 {{- end }}

@@ -55,17 +55,7 @@ SubImage Outpost creates a secure proxy using Tailscale to access private Kubern
 
 ### Quick Start
 
-Install the chart with required values:
-
-```bash
-helm install my-outpost ./subimage-outpost \
-  --set outpost.tenantId="customer-name" \
-  --set outpost.authKey="tskey-client-xxxxx-xxxxxxxxxxxxxx" \
-  --set outpost.proxyTarget="https://kubernetes.default.svc" \
-  --set outpost.verifyTls=false
-```
-
-Or create a values file:
+Create a values file with your configuration:
 
 ```bash
 cat > my-values.yaml <<EOF
@@ -79,6 +69,8 @@ EOF
 
 helm install my-outpost ./subimage-outpost -f my-values.yaml
 ```
+
+> **Security Note**: Always use a values file (`-f`) for sensitive data like `authKey`. Avoid passing secrets via `--set` on the command line, as they are exposed in shell history and process listings.
 
 **Important Notes:**
 - The Tailscale hostname will be: `{tenantId}-{name}-outpost` (e.g., `veriff-subimage-outpost`)
