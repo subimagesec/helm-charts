@@ -6,27 +6,23 @@ metadata:
   labels:
     {{- include "subimage-outpost.labels" . | nindent 4 }}
 rules:
-{{- if .Values.rbac.readAll }}
-# Read-only access to all resources
-- apiGroups: ["*"]
-  resources: ["*"]
-  verbs: ["get", "list", "watch"]
-# Access to non-resource URLs (API discovery and health endpoints)
-# Note: These paths allow API discovery but do NOT grant access to resources themselves
-- nonResourceURLs: ["/", "/api", "/api/*", "/apis", "/apis/*", "/version", "/healthz", "/livez", "/readyz", "/openapi", "/openapi/*", "/swagger.json", "/swagger-2.0.0.pb-v1", "/metrics"]
+# Core resources
+- apiGroups: [""]
+  resources: ["namespaces", "pods", "services", "serviceaccounts"]
+  verbs: ["get", "list"]
+# Secrets - list only, cannot read values
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["list"]
+# ConfigMaps - for aws-auth
+- apiGroups: [""]
+  resources: ["configmaps"]
   verbs: ["get"]
-{{- else }}
-# Granular permissions based on resourceGroups
-{{- range .Values.rbac.resourceGroups }}
-- apiGroups:
-  {{- toYaml .apiGroups | nindent 4 }}
-  resources:
-  {{- toYaml .resources | nindent 4 }}
-  verbs:
-  {{- toYaml .verbs | nindent 4 }}
-{{- end }}
-# Access to non-resource URLs (API discovery endpoints)
-- nonResourceURLs: ["/", "/api", "/api/*", "/apis", "/apis/*", "/version", "/healthz", "/openapi/*"]
+# RBAC resources
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+  verbs: ["get", "list"]
+# Non-resource URLs (API discovery and health endpoints)
+- nonResourceURLs: ["/version", "/healthz"]
   verbs: ["get"]
-{{- end }}
 {{- end }}

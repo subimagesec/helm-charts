@@ -61,26 +61,16 @@ Your SubImage Outpost has been deployed to namespace: {{ .Values.namespace.name 
 {{- if .Values.rbac.create }}
 
 🔐 RBAC Configuration:
-  {{- if .Values.rbac.readAll }}
-  ✅ ClusterRole created with READ-ONLY access to ALL resources
-  {{- else }}
-  ✅ ClusterRole created with granular permissions
-  {{- end }}
-  
+  ✅ ClusterRole created with minimum required permissions
+
   ServiceAccount: {{ .Values.serviceAccount.name | default (include "subimage-outpost.fullname" .) }}
   ClusterRole: {{ include "subimage-outpost.fullname" . }}
   ClusterRoleBinding: {{ include "subimage-outpost.fullname" . }}
-  
+
   🧪 Test API access from pod:
     kubectl exec -n {{ .Values.namespace.name }} deployment/{{ include "subimage-outpost.fullname" . }} -- \
       curl -sk -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
       https://kubernetes.default.svc/api/v1/namespaces
-  
-  {{- if .Values.rbac.readAll }}
-  ⚠️  Security Note: The outpost has cluster-wide READ access. This is required
-      for comprehensive security scanning but may be restricted in some environments.
-      To use granular permissions, set rbac.readAll=false and configure rbac.resourceGroups.
-  {{- end }}
 {{- else }}
 
 ⚠️  RBAC is disabled!
@@ -95,4 +85,4 @@ Your SubImage Outpost has been deployed to namespace: {{ .Values.namespace.name 
 
 📚 Documentation: See README.md for complete configuration options
 
-For support: https://github.com/subimage/issues
+For support: https://github.com/subimagesec/helm-charts/issues

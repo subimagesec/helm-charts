@@ -153,7 +153,7 @@ affinity: {}
 livenessProbe:
   enabled: true
   exec:
-    command: ["sh", "-c", "test -S /var/run/tailscale/tailscaled.sock"]
+    command: ["test", "-S", "/var/run/tailscale/tailscaled.sock"]
   initialDelaySeconds: 30
   periodSeconds: 10
   timeoutSeconds: 5
@@ -182,24 +182,6 @@ serviceAccount:
 rbac:
   # Create ClusterRole and ClusterRoleBinding
   create: true
-  
-  # Read-only access to all resources (recommended for security scanning)
-  # When true, grants get/list/watch on all API groups and resources
-  readAll: true
-  
-  # Granular permissions (only used if readAll is false)
-  # Define specific resource groups to limit access
-  resourceGroups: []
-  # Example for specific resources:
-  # - apiGroups: [""]
-  #   resources: ["pods", "services", "nodes", "namespaces"]
-  #   verbs: ["get", "list", "watch"]
-  # - apiGroups: ["apps"]
-  #   resources: ["deployments", "statefulsets", "daemonsets"]
-  #   verbs: ["get", "list", "watch"]
-  # - apiGroups: ["networking.k8s.io"]
-  #   resources: ["networkpolicies", "ingresses"]
-  #   verbs: ["get", "list", "watch"]
 
 # Security context (already removed NET_ADMIN requirement)
 securityContext: {}
