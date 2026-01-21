@@ -13,7 +13,7 @@ Public Helm charts for SubImage products.
 ### Add the Helm Repository
 
 ```bash
-helm repo add subimage https://subimage.github.io/helm-charts
+helm repo add subimage https://subimagesec.github.io/helm-charts/
 helm repo update
 ```
 
