@@ -33,7 +33,7 @@ outpost:
 # Uses the official SubImage Outpost image from GitHub Container Registry
 image:
   repository: ghcr.io/subimagesec/subimage-outpost
-  tag: "1.0.0"
+  tag: "1.0.2"
   pullPolicy: IfNotPresent
 
 # OPTIONAL: Corporate proxy configuration
