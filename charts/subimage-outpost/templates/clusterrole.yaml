@@ -10,7 +10,7 @@ rules:
 - apiGroups: [""]
   resources: ["namespaces", "pods", "services", "serviceaccounts"]
   verbs: ["get", "list"]
-# Secrets - list only, cannot read values
+# Secrets
 - apiGroups: [""]
   resources: ["secrets"]
   verbs: ["list"]
