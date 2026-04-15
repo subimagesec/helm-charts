@@ -71,7 +71,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: {{ include "subimage-outpost.authKeySecretName" . }}
-              key: {{ .Values.outpost.authKey.secret.key }}
+              key: {{ .Values.outpost.authKey.secret.key | default "TAILSCALE_AUTHKEY" }}
         {{- if .Values.proxy.enabled }}
         - name: HTTP_PROXY
           value: {{ .Values.proxy.httpProxy | quote }}
