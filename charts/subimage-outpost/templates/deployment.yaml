@@ -70,8 +70,8 @@ spec:
         - name: TAILSCALE_AUTHKEY
           valueFrom:
             secretKeyRef:
-              name: {{ include "subimage-outpost.fullname" . }}-secrets
-              key: TAILSCALE_AUTHKEY
+              name: {{ include "subimage-outpost.authKeySecretName" . }}
+              key: {{ .Values.outpost.authKey.secret.key }}
         {{- if .Values.proxy.enabled }}
         - name: HTTP_PROXY
           value: {{ .Values.proxy.httpProxy | quote }}

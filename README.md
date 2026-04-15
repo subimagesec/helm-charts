@@ -22,7 +22,7 @@ helm repo update
 ```bash
 helm install my-outpost subimage/subimage-outpost \
   --set outpost.tenantId="your-tenant-id" \
-  --set outpost.authKey="tskey-client-xxxxx-xxxxxxxxxxxxxx"
+  --set outpost.authKey.value="tskey-client-xxxxx-xxxxxxxxxxxxxx"
 ```
 
 See the [subimage-outpost README](./charts/subimage-outpost/README.md) for detailed configuration options.

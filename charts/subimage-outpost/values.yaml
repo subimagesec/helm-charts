@@ -39,7 +39,17 @@ outpost:
   # The OAuth client is created via Terraform and scoped to your tenant
   # NOTE: The chart automatically appends "?ephemeral=true" to ensure
   # the Tailscale node is removed when the pod is deleted
-  authKey: ""
+  authKey:
+    # The auth key value (required when secret.create is true)
+    value: ""
+    secret:
+      # Set to false to use a pre-existing secret instead of creating one
+      create: true
+      # Name of the pre-existing secret (required when secret.create is false)
+      # When secret.create is true, defaults to "<fullname>-secrets"
+      name: ""
+      # Key inside the secret that holds the auth key
+      key: "TAILSCALE_AUTHKEY"
 
 # Image configuration
 image:

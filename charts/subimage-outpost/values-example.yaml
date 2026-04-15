@@ -27,7 +27,18 @@ outpost:
 
   # REQUIRED: Tailscale OAuth client secret (provided by SubImage)
   # NOTE: Do not add "?ephemeral=true" - the chart does this automatically
-  authKey: "tskey-client-xxxxx-xxxxxxxxxxxxxx"
+  authKey:
+    value: "tskey-client-xxxxx-xxxxxxxxxxxxxx"
+    secret:
+      create: true
+      # name: ""  # defaults to "<fullname>-secrets"
+      key: "TAILSCALE_AUTHKEY"
+  # To use a pre-existing secret instead:
+  # authKey:
+  #   secret:
+  #     create: false
+  #     name: "my-existing-secret"
+  #     key: "TAILSCALE_AUTHKEY"
 
 # Image configuration
 # Uses the official SubImage Outpost image from GitHub Container Registry
