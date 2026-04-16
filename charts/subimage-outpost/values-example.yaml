@@ -31,8 +31,9 @@ outpost:
     value: "tskey-client-xxxxx-xxxxxxxxxxxxxx"
     secret:
       create: true
-      # name: ""  # defaults to "<fullname>-secrets"
-      key: "TAILSCALE_AUTHKEY"
+      # When create is true, name and key are ignored:
+      #   - Secret name is always "<fullname>-secrets"
+      #   - Secret key is always "TAILSCALE_AUTHKEY"
   # To use a pre-existing secret instead:
   # authKey:
   #   secret:

@@ -45,10 +45,12 @@ outpost:
     secret:
       # Set to false to use a pre-existing secret instead of creating one
       create: true
-      # Name of the pre-existing secret (required when secret.create is false)
-      # When secret.create is true, defaults to "<fullname>-secrets"
+      # Name of the pre-existing secret (only used when secret.create is false)
+      # Ignored when secret.create is true (uses "<fullname>-secrets")
       name: ""
-      # Key inside the secret that holds the auth key
+      # Key inside the pre-existing secret that holds the auth key
+      # Only used when secret.create is false (defaults to "TAILSCALE_AUTHKEY")
+      # Ignored when secret.create is true (always uses "TAILSCALE_AUTHKEY")
       key: "TAILSCALE_AUTHKEY"
 
 # Image configuration

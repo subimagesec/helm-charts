@@ -55,7 +55,7 @@ If false, use the user-provided authKey.secret.name.
 */}}
 {{- define "subimage-outpost.authKeySecretName" -}}
 {{- if .Values.outpost.authKey.secret.create -}}
-{{- .Values.outpost.authKey.secret.name | default (printf "%s-secrets" (include "subimage-outpost.fullname" .)) -}}
+{{- printf "%s-secrets" (include "subimage-outpost.fullname" .) -}}
 {{- else -}}
 {{- required "outpost.authKey.secret.name is required when outpost.authKey.secret.create is false" .Values.outpost.authKey.secret.name -}}
 {{- end -}}
