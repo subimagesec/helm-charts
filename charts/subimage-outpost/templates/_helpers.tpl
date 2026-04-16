@@ -47,3 +47,16 @@ Selector labels
 app.kubernetes.io/name: {{ include "subimage-outpost.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Return the secret name for the auth key.
+If authKey.secret.create is true, use the chart-generated name.
+If false, use the user-provided authKey.secret.name.
+*/}}
+{{- define "subimage-outpost.authKeySecretName" -}}
+{{- if .Values.outpost.authKey.secret.create -}}
+{{- printf "%s-secrets" (include "subimage-outpost.fullname" .) -}}
+{{- else -}}
+{{- required "outpost.authKey.secret.name is required when outpost.authKey.secret.create is false" .Values.outpost.authKey.secret.name -}}
+{{- end -}}
+{{- end }}
