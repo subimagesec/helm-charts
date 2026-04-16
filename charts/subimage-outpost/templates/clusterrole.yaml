@@ -10,7 +10,7 @@ rules:
 - apiGroups: [""]
   resources: ["namespaces", "pods", "services", "serviceaccounts"]
   verbs: ["get", "list"]
-# Secrets - list only, cannot read values
+# Secrets
 - apiGroups: [""]
   resources: ["secrets"]
   verbs: ["list"]
@@ -18,6 +18,10 @@ rules:
 - apiGroups: [""]
   resources: ["configmaps"]
   verbs: ["get"]
+# Networking resources
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list"]
 # RBAC resources
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]

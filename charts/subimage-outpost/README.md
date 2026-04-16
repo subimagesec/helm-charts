@@ -179,8 +179,6 @@ The chart creates a ServiceAccount with a ClusterRole by default:
 ```yaml
 rbac:
   create: true
-  # Read-only access to all resources (recommended for security scanning)
-  readAll: true
 ```
 
 **How Authentication Works:**
@@ -194,41 +192,28 @@ When `rbac.create: true`, the chart automatically:
 
 This means requests to the Kubernetes API will be authenticated as the ServiceAccount, allowing SubImage to scan your cluster with the configured RBAC permissions.
 
-**Important:** The ClusterRole includes permissions for both:
-- **Resources** (pods, services, deployments, etc.) - for listing/reading actual cluster objects
-- **Non-resource URLs** (/, /api, /apis, /version, /healthz) - for API discovery and navigation only
+Today, the chart's default `ClusterRole` grants the read-only permissions needed
+for SubImage's Kubernetes and EKS discovery:
+
+- core resources:
+  `namespaces`, `pods`, `services`, and `serviceaccounts` with `get` / `list`
+- secrets:
+  `secrets` with `list`
+- EKS metadata:
+  `configmaps` with `get` so the scanner can read `kube-system/aws-auth`
+- networking:
+  `networking.k8s.io/ingresses` with `get` / `list`
+- RBAC objects:
+  `roles`, `rolebindings`, `clusterroles`, and `clusterrolebindings` with `get` /
+  `list`
+- non-resource URLs:
+  `/`, `/api`, `/apis`, `/version`, and `/healthz` with `get`
 
 **Security Note:** Non-resource URL permissions allow discovering which API groups and versions exist, but do **not** grant access to the resources themselves. For example, access to `/apis/apps/v1` allows seeing that the "apps" API group exists, but listing `/apis/apps/v1/deployments` still requires explicit `resources: ["deployments"]` permissions.
 
-**Security Note:** The default configuration grants **read-only access to all cluster resources**. This is required for comprehensive security scanning but may be too permissive for some environments.
-
-**For granular permissions**, set `readAll: false` and configure specific resource groups:
-
-```yaml
-rbac:
-  create: true
-  readAll: false
-  resourceGroups:
-    # Core API resources
-    - apiGroups: [""]
-      resources: ["pods", "services", "nodes", "namespaces", "configmaps", "secrets"]
-      verbs: ["get", "list", "watch"]
-    
-    # Apps resources
-    - apiGroups: ["apps"]
-      resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
-      verbs: ["get", "list", "watch"]
-    
-    # Networking
-    - apiGroups: ["networking.k8s.io"]
-      resources: ["networkpolicies", "ingresses"]
-      verbs: ["get", "list", "watch"]
-    
-    # RBAC (to scan existing permissions)
-    - apiGroups: ["rbac.authorization.k8s.io"]
-      resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
-      verbs: ["get", "list", "watch"]
-```
+**Important:** The chart does not currently expose `readAll`, `resourceGroups`, or
+other granular RBAC values. If you need a different permission set, update the
+rendered `ClusterRole` template before deploying.
 
 **Understanding RBAC Permissions:**
 
@@ -237,7 +222,7 @@ Kubernetes RBAC has two separate permission systems:
 | Permission Type | Controls Access To | Example Paths | Grants Resource Access? |
 |----------------|-------------------|---------------|------------------------|
 | **Non-Resource URLs** | API discovery, health checks, metadata | `/`, `/api`, `/apis`, `/version`, `/healthz` | ❌ No - metadata only |
-| **Resources** | Actual Kubernetes objects | `pods`, `services`, `deployments` | ✅ Yes - allows get/list/watch |
+| **Resources** | Actual Kubernetes objects | `pods`, `services`, `ingresses` | ✅ Yes - allows get/list/watch |
 
 **Example:** With only `nonResourceURLs: ["/apis/*"]`:
 - ✅ Can access `/apis/apps/v1` (see that the "apps" API group exists)
