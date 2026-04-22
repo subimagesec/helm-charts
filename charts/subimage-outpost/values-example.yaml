@@ -100,10 +100,7 @@ networkPolicy:
 # Required if proxyTarget is the Kubernetes API
 rbac:
   create: true
-  # Read-only access to all resources (recommended)
-  readAll: true
-  # For granular permissions, set readAll: false and configure resourceGroups
-  # resourceGroups:
-  #   - apiGroups: [""]
-  #     resources: ["pods", "services", "nodes"]
-  #     verbs: ["get", "list", "watch"]
+  # Grant list permission on Secrets cluster-wide.
+  # Note: `list` returns full Secret data (values), not just metadata.
+  # Set to false to opt out if the outpost does not need Secret contents.
+  secrets: true
