@@ -10,10 +10,16 @@ rules:
 - apiGroups: [""]
   resources: ["namespaces", "pods", "services", "serviceaccounts"]
   verbs: ["get", "list"]
+# Nodes
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["list"]
+{{- if .Values.rbac.secrets }}
 # Secrets
 - apiGroups: [""]
   resources: ["secrets"]
   verbs: ["list"]
+{{- end }}
 # ConfigMaps - for aws-auth
 - apiGroups: [""]
   resources: ["configmaps"]
