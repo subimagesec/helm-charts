@@ -3,6 +3,28 @@ entries:
   subimage-outpost:
   - apiVersion: v2
     appVersion: 1.0.5
+    created: "2026-04-22T21:55:05.569475427Z"
+    description: Deploy SubImage Outpost with Tailscale in restrictive Kubernetes
+      environments
+    digest: be26bc90d7f69756ab41024503ec80dc1fbb0b60b762700649c3b43654ff64fc
+    home: https://subimage.io
+    keywords:
+    - tailscale
+    - proxy
+    - outpost
+    - security
+    maintainers:
+    - name: SubImage
+      url: https://subimage.io
+    name: subimage-outpost
+    sources:
+    - https://github.com/subimagesec/helm-charts
+    type: application
+    urls:
+    - https://github.com/subimagesec/helm-charts/releases/download/subimage-outpost-1.2.0/subimage-outpost-1.2.0.tgz
+    version: 1.2.0
+  - apiVersion: v2
+    appVersion: 1.0.5
     created: "2026-04-16T23:55:05.89386373Z"
     description: Deploy SubImage Outpost with Tailscale in restrictive Kubernetes
       environments
@@ -155,4 +177,4 @@ entries:
     urls:
     - https://github.com/subimagesec/helm-charts/releases/download/subimage-outpost-1.0.0/subimage-outpost-1.0.0.tgz
     version: 1.0.0
-generated: "2026-04-16T23:55:05.893886213Z"
+generated: "2026-04-22T21:55:05.569506956Z"
