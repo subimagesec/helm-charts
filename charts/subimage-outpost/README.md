@@ -205,6 +205,10 @@ for SubImage's Kubernetes and EKS discovery:
   `configmaps` with `get` so the scanner can read `kube-system/aws-auth`
 - networking:
   `networking.k8s.io/ingresses` with `get` / `list`
+- Gateway API:
+  `gateway.networking.k8s.io/gateways` and
+  `gateway.networking.k8s.io/httproutes` with `list`. These permissions are
+  only used when Gateway API CRDs are installed in the cluster.
 - RBAC objects:
   `roles`, `rolebindings`, `clusterroles`, and `clusterrolebindings` with `get` /
   `list`
