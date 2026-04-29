@@ -56,7 +56,7 @@ outpost:
 # Image configuration
 image:
   repository: ghcr.io/subimagesec/subimage-outpost
-  tag: "1.0.5"
+  tag: "1.0.6"
   pullPolicy: IfNotPresent
 
 # Image pull secrets (not required - image is public)
@@ -93,6 +93,11 @@ resources:
   limits:
     cpu: "500m"
     memory: "512Mi"
+
+# Pod terminationGracePeriodSeconds. Must cover the preStop hook (tailscale
+# logout) plus the regular SIGTERM grace — preStop runs first and the grace
+# clock starts when termination is requested.
+terminationGracePeriodSeconds: 60
 
 # Network Policy configuration
 networkPolicy:
