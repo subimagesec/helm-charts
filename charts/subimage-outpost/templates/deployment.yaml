@@ -26,6 +26,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ .Values.serviceAccount.name | default (include "subimage-outpost.fullname" .) }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -48,6 +49,11 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 10 }}
+        # Run logout before SIGTERM so the RPC isn't racing tailscaled teardown.
+        lifecycle:
+          preStop:
+            exec:
+              command: ["tailscale", "logout"]
         env:
         - name: TENANT_ID
           value: {{ required "outpost.tenantId is required" .Values.outpost.tenantId | quote }}

@@ -94,6 +94,11 @@ resources:
     cpu: "500m"
     memory: "512Mi"
 
+# Pod terminationGracePeriodSeconds. Must cover the preStop hook (tailscale
+# logout) plus the regular SIGTERM grace — preStop runs first and the grace
+# clock starts when termination is requested.
+terminationGracePeriodSeconds: 60
+
 # Network Policy configuration
 networkPolicy:
   # Enable NetworkPolicy to allow Tailscale egress
