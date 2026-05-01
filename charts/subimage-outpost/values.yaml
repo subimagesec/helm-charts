@@ -29,6 +29,13 @@ outpost:
   # REQUIRED: Verify TLS certificates (set to false for self-signed certs)
   verifyTls: true
 
+  # OPTIONAL: Path inside the pod to a CA bundle file for TLS verification.
+  # Only honored when verifyTls: true.
+  # If unset, the outpost auto-detects the Kubernetes serviceaccount CA at
+  # /var/run/secrets/kubernetes.io/serviceaccount/ca.crt when present, which
+  # is what's needed to verify https://kubernetes.default.svc.
+  caBundle: ""
+
   # OPTIONAL: Override Host header sent to target
   # Useful for reverse proxies that require specific Host headers
   # Leave empty to use the original Host header from the request
@@ -56,7 +63,7 @@ outpost:
 # Image configuration
 image:
   repository: ghcr.io/subimagesec/subimage-outpost
-  tag: "1.0.6"
+  tag: "1.0.7"
   pullPolicy: IfNotPresent
 
 # Image pull secrets (not required - image is public)
