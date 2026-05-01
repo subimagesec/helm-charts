@@ -65,6 +65,10 @@ spec:
           value: {{ .Values.outpost.proxyTarget | quote }}
         - name: VERIFY_TLS
           value: {{ .Values.outpost.verifyTls | quote }}
+        {{- if .Values.outpost.caBundle }}
+        - name: CA_BUNDLE
+          value: {{ .Values.outpost.caBundle | quote }}
+        {{- end }}
         {{- if .Values.outpost.proxyHost }}
         - name: PROXY_HOST
           value: {{ .Values.outpost.proxyHost | quote }}
