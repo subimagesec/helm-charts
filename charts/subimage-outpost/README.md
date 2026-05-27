@@ -166,7 +166,8 @@ For clusters with strict NetworkPolicies:
 ```yaml
 networkPolicy:
   enabled: true
-  # Egress rules are pre-configured for Tailscale
+  # Egress rules are pre-configured for Tailscale and Kubernetes API access
+  # in IPv4-only, IPv6-only, and dual-stack clusters.
   # Edit values.yaml to add custom rules if needed
 ```
 
@@ -398,8 +399,8 @@ kubectl get secret -n subimage-outpost <release-name>-subimage-outpost-secrets -
 # 2. Check if NetworkPolicy is blocking
 kubectl get networkpolicy -n subimage-outpost
 
-# 3. Verify egress is allowed to:
-# - TCP 443 (Tailscale control plane)
+# 3. Verify IPv4 and IPv6 egress is allowed to:
+# - TCP 443 (Tailscale control plane and Kubernetes API service addresses)
 # - UDP 3478 (STUN/DERP)
 # - UDP 41641 (DERP)
 
