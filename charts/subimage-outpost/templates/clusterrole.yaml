@@ -26,7 +26,7 @@ rules:
   verbs: ["get"]
 # Networking resources
 - apiGroups: ["networking.k8s.io"]
-  resources: ["ingresses"]
+  resources: ["ingresses", "networkpolicies"]
   verbs: ["get", "list"]
 # Gateway API resources
 - apiGroups: ["gateway.networking.k8s.io"]

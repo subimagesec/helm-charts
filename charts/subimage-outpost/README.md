@@ -352,6 +352,9 @@ curl http://acme-subimage-outpost.tail788e86.ts.net/api/v1/namespaces
 # List all pods in all namespaces
 curl http://acme-subimage-outpost.tail788e86.ts.net/api/v1/pods
 
+# List all NetworkPolicies in all namespaces
+curl http://acme-subimage-outpost.tail788e86.ts.net/apis/networking.k8s.io/v1/networkpolicies
+
 # Get specific namespace
 curl http://acme-subimage-outpost.tail788e86.ts.net/api/v1/namespaces/default
 ```
