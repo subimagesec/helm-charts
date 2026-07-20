@@ -24,6 +24,13 @@ rules:
 - apiGroups: [""]
   resources: ["configmaps"]
   verbs: ["get"]
+# Workload controllers - enable the WORKLOAD_PARENT chain from a pod to its owning controller
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+  verbs: ["list"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["list"]
 # Networking resources
 - apiGroups: ["networking.k8s.io"]
   resources: ["ingresses", "networkpolicies"]

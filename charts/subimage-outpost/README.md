@@ -204,6 +204,9 @@ for SubImage's Kubernetes and EKS discovery:
   `secrets` with `list` (opt-out via `rbac.secrets: false` — see note below)
 - EKS metadata:
   `configmaps` with `get` so the scanner can read `kube-system/aws-auth`
+- workload controllers:
+  `apps/deployments`, `apps/replicasets`, `apps/statefulsets`,
+  `apps/daemonsets`, `batch/jobs`, and `batch/cronjobs` with `list`
 - networking:
   `networking.k8s.io/ingresses` with `get` / `list`
 - Gateway API:
