@@ -93,6 +93,8 @@ outpost:
   # OPTIONAL
   name: "subimage"                   # Outpost name - only needed for multiple outposts
   proxyHost: ""                      # Override Host header (leave empty for default)
+  connectTimeout: ""                 # Seconds to connect to proxyTarget (image default: 15)
+  readTimeout: ""                    # Seconds to wait for a response (image default: 60)
 ```
 
 **How the hostname is constructed:**
@@ -407,8 +409,15 @@ kubectl get networkpolicy -n subimage-outpost
 
 # 3. Verify IPv4 and IPv6 egress is allowed to:
 # - TCP 443 (Tailscale control plane and Kubernetes API service addresses)
+# - TCP 6443 (Kubernetes API on self-managed clusters: kubeadm, RKE, most on-prem)
 # - UDP 3478 (STUN/DERP)
 # - UDP 41641 (DERP)
+# - UDP 53 and TCP 53 (cluster DNS; TCP is the glibc fallback for truncated replies)
+
+# 3b. Confirm which port your API server endpoints actually use. If this shows
+# 6443 and egress to 6443 is blocked, the SYN is dropped rather than refused,
+# which surfaces as a connect timeout instead of a DNS or TLS error.
+kubectl get endpoints kubernetes -n default
 
 # 4. If using OAuth client, ensure it's enabled in Tailscale
 # Contact SubImage support to verify Terraform was applied
