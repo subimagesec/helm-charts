@@ -36,6 +36,18 @@ outpost:
   # is what's needed to verify https://kubernetes.default.svc.
   caBundle: ""
 
+  # OPTIONAL: Seconds to wait for a TCP/TLS connection to proxyTarget.
+  # Leave empty to use the image default (15). Raise it when cluster DNS is
+  # slow: a degraded CoreDNS with ndots:5 search-domain fanout can take a
+  # while to resolve kubernetes.default.svc, and the outpost used to give
+  # up after httpx's 5s default.
+  connectTimeout: ""
+
+  # OPTIONAL: Seconds to wait for the target's response, also applied to the
+  # write and pool timeouts. Leave empty to use the image default (60).
+  # Raise it for large list calls against a big cluster.
+  readTimeout: ""
+
   # OPTIONAL: Override Host header sent to target
   # Useful for reverse proxies that require specific Host headers
   # Leave empty to use the original Host header from the request
@@ -63,7 +75,7 @@ outpost:
 # Image configuration
 image:
   repository: ghcr.io/subimagesec/subimage-outpost
-  tag: "1.1.1"
+  tag: "1.2.0"
   pullPolicy: IfNotPresent
 
 # Image pull secrets (not required - image is public)
@@ -113,7 +125,10 @@ networkPolicy:
 
   # Allow egress to Tailscale control plane and DERP servers
   egressRules:
-    # Tailscale control plane and Kubernetes API service addresses (HTTPS)
+    # Tailscale control plane and Kubernetes API service addresses (HTTPS).
+    # 6443 is here and not only under the namespaceSelector rule below because
+    # the kubernetes.default.svc endpoints are node IPs on self-managed
+    # clusters, and a namespaceSelector only ever matches pods.
     - to:
       - ipBlock:
           cidr: 0.0.0.0/0
@@ -122,6 +137,8 @@ networkPolicy:
       ports:
       - protocol: TCP
         port: 443
+      - protocol: TCP
+        port: 6443
     # STUN/DERP (UDP)
     - to:
       - ipBlock:
@@ -133,13 +150,17 @@ networkPolicy:
         port: 3478
       - protocol: UDP
         port: 41641
-    # DNS
+    # DNS. TCP 53 is required because glibc retries over TCP when a UDP
+    # response comes back truncated; dropping it makes the resolver stall
+    # instead of failing fast.
     - to:
       - namespaceSelector:
           matchLabels:
             kubernetes.io/metadata.name: kube-system
       ports:
       - protocol: UDP
+        port: 53
+      - protocol: TCP
         port: 53
     # Kubernetes API (for proxy target)
     - to:
