@@ -202,6 +202,10 @@ for SubImage's Kubernetes and EKS discovery:
   `namespaces`, `pods`, `services`, and `serviceaccounts` with `get` / `list`
 - nodes:
   `nodes` with `list`
+- persistent storage:
+  `persistentvolumes`, `persistentvolumeclaims`, and
+  `storage.k8s.io/storageclasses` with `list` so SubImage can map pod mounts to
+  their backing volumes, storage classes, and CSI drivers
 - secrets:
   `secrets` with `list` (opt-out via `rbac.secrets: false` — see note below)
 - EKS metadata:
