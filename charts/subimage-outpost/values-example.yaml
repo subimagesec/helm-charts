@@ -54,7 +54,7 @@ outpost:
 # releases behind. Uncomment to pin a specific version.
 image:
   repository: ghcr.io/subimagesec/subimage-outpost
-  # tag: "1.2.0"
+  # tag: "1.2.1"
   pullPolicy: IfNotPresent
 
 # OPTIONAL: Corporate proxy configuration
