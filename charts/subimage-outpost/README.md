@@ -203,8 +203,8 @@ for SubImage's Kubernetes and EKS discovery:
 - nodes:
   `nodes` with `list`
 - persistent storage:
-  `persistentvolumes`, `persistentvolumeclaims`, and
-  `storage.k8s.io/storageclasses` and `storage.k8s.io/volumeattachments` with
+  `persistentvolumes`, `persistentvolumeclaims`,
+  `storage.k8s.io/storageclasses`, and `storage.k8s.io/volumeattachments` with
   `list` so SubImage can map pod mounts to their backing volumes, storage
   classes, CSI drivers, and planned volume-to-node attachment state
 - secrets:
