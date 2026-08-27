@@ -75,7 +75,7 @@ outpost:
 # Image configuration
 image:
   repository: ghcr.io/subimagesec/subimage-outpost
-  tag: "1.2.0"
+  tag: "1.2.1"
   pullPolicy: IfNotPresent
 
 # Image pull secrets (not required - image is public)
