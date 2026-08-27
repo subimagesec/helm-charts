@@ -19,7 +19,7 @@ rules:
   resources: ["persistentvolumes", "persistentvolumeclaims"]
   verbs: ["list"]
 - apiGroups: ["storage.k8s.io"]
-  resources: ["storageclasses"]
+  resources: ["storageclasses", "volumeattachments"]
   verbs: ["list"]
 {{- if .Values.rbac.secrets }}
 # Secrets
