@@ -123,7 +123,10 @@ networkPolicy:
   # Enable NetworkPolicy to allow Tailscale egress
   enabled: true
 
-  # Allow egress to Tailscale control plane and DERP servers
+  # Portable connectivity defaults, not a destination allowlist. Standard
+  # Kubernetes NetworkPolicy cannot select DNS names, while Tailscale's control
+  # and DERP addresses change. Hardened environments should replace this entire
+  # list with customer-approved proxy, FQDN-policy, and Kubernetes API rules.
   egressRules:
     # Tailscale control plane and Kubernetes API service addresses (HTTPS).
     # 6443 is here and not only under the namespaceSelector rule below because
@@ -139,7 +142,10 @@ networkPolicy:
         port: 443
       - protocol: TCP
         port: 6443
-    # STUN/DERP (UDP)
+    # Tailscale STUN and best-effort direct WireGuard connectivity. NetworkPolicy
+    # filters destination ports, so 41641 does not express Tailscale's full
+    # recommendation of source port 41641 to arbitrary peer destination ports;
+    # TCP 443 keeps DERP relay fallback available.
     - to:
       - ipBlock:
           cidr: 0.0.0.0/0

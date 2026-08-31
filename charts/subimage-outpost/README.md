@@ -1,10 +1,11 @@
 # SubImage Outpost Helm Chart
 
-Deploy SubImage Outpost with Tailscale in restrictive Kubernetes environments. This Helm chart is designed to work around common cluster restrictions while maintaining security best practices.
+Deploy SubImage Outpost with Tailscale in restrictive Kubernetes environments.
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Scope](#scope)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
   - [Before You Begin](#before-you-begin)
@@ -32,6 +33,21 @@ SubImage Outpost creates a secure proxy using Tailscale to access private Kubern
 - NetworkPolicy configuration for Tailscale connectivity
 - Corporate proxy support
 - Resource constraints and node placement
+
+## Scope
+
+This chart installs one small proxy for one private network or Kubernetes
+cluster. SubImage reaches the proxy through a tenant-scoped Tailscale connection,
+and the proxy forwards requests to one configured `proxyTarget`.
+
+This chart does **not**:
+
+- install the complete self-hosted SubImage platform
+- create or operate an EKS cluster
+- grant SubImage a maintenance role or Kubernetes administrator access
+
+The chart for a full self-hosted SubImage deployment is a separate artifact with
+its own installation, upgrade, and access model.
 
 ## Prerequisites
 
@@ -61,10 +77,13 @@ Create a values file with your configuration:
 cat > my-values.yaml <<EOF
 outpost:
   tenantId: "customer-name"
-  authKey: "tskey-client-xxxxx-xxxxxxxxxxxxxx"
   proxyTarget: "https://kubernetes.default.svc"
-  verifyTls: false
+  verifyTls: true
+  authKey:
+    value: "tskey-client-xxxxx-xxxxxxxxxxxxxx"
   # name: "subimage"  # Optional - only needed for multiple outposts
+rbac:
+  secrets: false
 EOF
 
 helm install my-outpost ./subimage-outpost -f my-values.yaml
@@ -86,9 +105,10 @@ These values must be provided:
 outpost:
   # REQUIRED
   tenantId: "customer-name"          # Your tenant ID (provided by SubImage)
-  authKey: "tskey-client-xxxxx"      # Tailscale OAuth client secret (provided by SubImage)
   proxyTarget: "https://kubernetes.default.svc"  # Target URL to proxy
-  verifyTls: false                    # Set to false for self-signed certificates
+  verifyTls: true
+  authKey:
+    value: "tskey-client-xxxxx"       # Tailscale OAuth client secret (provided by SubImage)
   
   # OPTIONAL
   name: "subimage"                   # Outpost name - only needed for multiple outposts
@@ -163,14 +183,82 @@ namespace:
 
 #### 5. Network-Restricted Clusters
 
-For clusters with strict NetworkPolicies:
+The default policy is a portable connectivity baseline, not a destination
+allowlist. It permits the following egress:
+
+| Traffic | Destination | Reason |
+| --- | --- | --- |
+| TCP 443 | Any IPv4 or IPv6 address | Tailscale coordination and changing DERP relay addresses; also covers Kubernetes API endpoints on 443 |
+| TCP 6443 | Any IPv4 or IPv6 address | Kubernetes API endpoints that `kubernetes.default.svc:443` translates to node or control-plane addresses on 6443 |
+| UDP 3478 | Any IPv4 or IPv6 address | Tailscale STUN |
+| UDP 41641 | Any IPv4 or IPv6 address | Best-effort direct WireGuard connectivity to peers listening on the default port |
+| TCP and UDP 53 | Pods in `kube-system` | Cluster DNS, including TCP fallback for truncated responses |
+
+Tailscale [recommends outbound TCP 443 to any destination](https://tailscale.com/kb/1082/firewall-ports)
+because its coordination and DERP relay addresses change. Standard Kubernetes
+`NetworkPolicy` is an IP- and port-level control and cannot allow DNS names.
+Restricting the default policy to today's Tailscale IP addresses would cause
+partial or intermittent connectivity as the relay fleet changes.
+
+The broad TCP rules are still a meaningful security tradeoff: if the Outpost pod
+is compromised, the policy does not prevent HTTPS exfiltration. The fixed
+`proxyTarget`, non-root container, ephemeral Tailscale identity, and tenant-scoped
+Tailscale ACL reduce exposure during normal operation, but they are not outbound
+destination controls.
+
+For environments that require destination-restricted egress, replace
+`networkPolicy.egressRules` in your values file. Helm replaces the complete list;
+it does not merge custom entries with the defaults. A restricted policy must
+still allow:
+
+1. Tailscale coordination and DERP connectivity, commonly through an approved
+   egress proxy or an FQDN-aware CNI policy.
+2. The actual IP addresses and ports behind `proxyTarget`. Kubernetes Service
+   translation may change port 443 to 6443 before the network policy is applied.
+3. Cluster DNS over both UDP and TCP 53.
+
+Use `kubectl -n default get endpoints kubernetes -o yaml` to inspect a Kubernetes
+API target. Managed control-plane addresses can change, so prefer a stable
+customer-controlled CIDR or egress policy over individual IP addresses. Validate
+the result with `tailscale netcheck` and requests to the proxied API.
+
+The following shape is illustrative; substitute destinations approved for your
+cluster and egress infrastructure:
 
 ```yaml
 networkPolicy:
   enabled: true
-  # Egress rules are pre-configured for Tailscale and Kubernetes API access
-  # in IPv4-only, IPv6-only, and dual-stack clusters.
-  # Edit values.yaml to add custom rules if needed
+  egressRules:
+    - to:
+        - ipBlock:
+            cidr: 10.0.10.25/32 # Approved egress proxy
+      ports:
+        - protocol: TCP
+          port: 3128
+    - to:
+        - ipBlock:
+            cidr: 10.20.0.0/16 # Kubernetes API endpoint range
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+proxy:
+  enabled: true
+  httpProxy: "http://10.0.10.25:3128"
+  httpsProxy: "http://10.0.10.25:3128"
+  allProxy: "http://10.0.10.25:3128"
+  noProxy: "localhost,127.0.0.1,.svc,.cluster.local"
 ```
 
 #### 6. Kubernetes API Access (RBAC)
@@ -182,7 +270,12 @@ The chart creates a ServiceAccount with a ClusterRole by default:
 ```yaml
 rbac:
   create: true
+  secrets: false
 ```
+
+`rbac.secrets: false` is the recommended least-privilege setting when Secret
+discovery is not required. The chart default remains `true` for compatibility
+with existing installations and complete discovery coverage.
 
 **How Authentication Works:**
 
@@ -237,8 +330,9 @@ rbac:
 ```
 
 **Important:** The chart does not currently expose `readAll`, `resourceGroups`, or
-other granular RBAC values. If you need a different permission set, update the
-rendered `ClusterRole` template before deploying.
+other granular RBAC values. If you need a different permission set, maintain a
+reviewed chart override or contribute the required permission toggle; do not edit
+an installed `ClusterRole` by hand because the next Helm upgrade will overwrite it.
 
 **Understanding RBAC Permissions:**
 
@@ -416,7 +510,7 @@ kubectl get networkpolicy -n subimage-outpost
 # - TCP 443 (Tailscale control plane and Kubernetes API service addresses)
 # - TCP 6443 (Kubernetes API on self-managed clusters: kubeadm, RKE, most on-prem)
 # - UDP 3478 (STUN/DERP)
-# - UDP 41641 (DERP)
+# - UDP 41641 (best-effort direct WireGuard connectivity)
 # - UDP 53 and TCP 53 (cluster DNS; TCP is the glibc fallback for truncated replies)
 
 # 3b. Confirm which port your API server endpoints actually use. If this shows
@@ -473,30 +567,21 @@ kubectl exec -n subimage-outpost deployment/my-outpost-subimage-outpost -- \
   curl -k -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
   https://kubernetes.default.svc/api/v1/namespaces
 
-# 7. If using granular permissions, ensure required resources are allowed
-# Check your values.yaml rbac.resourceGroups configuration
+# 7. Compare the rendered ClusterRole with the resources your scan requires.
+# The only per-resource permission toggle currently exposed is rbac.secrets.
 ```
 
 **If you get 403 Forbidden for specific resources:**
-- Set `rbac.readAll: true` for full read access
-- OR add missing resources to `rbac.resourceGroups`
+
+Compare the denied resource with the chart's `ClusterRole`. The only
+per-resource permission toggle currently exposed is `rbac.secrets`; other
+permission changes require a reviewed chart change.
 
 **For non-Kubernetes API targets:**
-If you're proxying to an internal service that requires authentication, you can provide a custom bearer token:
-
-```yaml
-# Option 1: Direct token (not recommended for production - use secrets)
-outpost:
-  extraEnv:
-    - name: BEARER_TOKEN
-      value: "your-api-token-here"
-
-# Option 2: Token from a mounted secret file
-outpost:
-  extraEnv:
-    - name: BEARER_TOKEN_PATH
-      value: "/path/to/token/file"
-```
+The Outpost image supports a bearer token or mounted token file, but this chart
+does not currently expose those settings. Add reviewed chart support before
+using Outpost with an authenticated non-Kubernetes target; `outpost.extraEnv` is
+not a supported value.
 
 ## Upgrading
 
@@ -519,7 +604,7 @@ kubectl delete namespace subimage-outpost
 
 1. **Ephemeral Nodes**: The chart automatically appends `?ephemeral=true` to auth keys, ensuring Tailscale nodes are removed when pods are deleted
 2. **Secrets Management**: Consider using external secret managers (AWS Secrets Manager, HashiCorp Vault)
-3. **Network Policies**: The chart creates NetworkPolicy by default - ensure your CNI supports it
+3. **Network Policies**: The default policy permits TCP 443 and 6443 to any destination for portable Tailscale and Kubernetes API connectivity. Replace `networkPolicy.egressRules` when your environment requires destination-restricted egress.
 4. **Pod Security**: The chart uses `baseline` PSS by default - adjust based on security requirements
 5. **Resource Limits**: Configure appropriate limits to prevent resource exhaustion
 
