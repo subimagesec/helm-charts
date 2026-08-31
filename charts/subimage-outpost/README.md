@@ -1,6 +1,7 @@
 # SubImage Outpost Helm Chart
 
-Deploy SubImage Outpost with Tailscale in restrictive Kubernetes environments.
+This Helm chart supports restrictive Kubernetes environments while exposing
+controls for network egress, RBAC, TLS verification, and proxy configuration.
 
 ## Table of Contents
 
