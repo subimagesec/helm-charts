@@ -17,8 +17,11 @@ outpost:
   proxyTarget: "https://kubernetes.default.svc"
 
   # REQUIRED: Verify TLS certificates
-  # The chart uses the mounted Kubernetes service account CA by default.
+  # The default Kubernetes target uses the mounted service account CA. For a
+  # non-Kubernetes target with a private CA, set caBundle to a CA file available
+  # inside the container.
   verifyTls: true
+  # caBundle: "/path/to/ca-bundle.crt"
 
   # OPTIONAL: Override Host header sent to target
   # Leave empty unless your reverse proxy requires a specific Host header

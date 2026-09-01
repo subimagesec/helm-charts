@@ -1,7 +1,8 @@
 # SubImage Outpost Helm Chart
 
-This Helm chart supports restrictive Kubernetes environments while exposing
-controls for network egress, RBAC, TLS verification, and proxy configuration.
+This Helm chart deploys SubImage Outpost with Tailscale in restrictive
+Kubernetes environments and exposes controls for network egress, RBAC, TLS
+verification, and proxy configuration.
 
 ## Table of Contents
 
@@ -194,6 +195,7 @@ allowlist. It permits the following egress:
 | UDP 3478 | Any IPv4 or IPv6 address | Tailscale STUN |
 | UDP 41641 | Any IPv4 or IPv6 address | Best-effort direct WireGuard connectivity to peers listening on the default port |
 | TCP and UDP 53 | Pods in `kube-system` | Cluster DNS, including TCP fallback for truncated responses |
+| TCP 443 and 6443 | Pods in all namespaces | Compatibility rule for Kubernetes API targets represented by pods |
 
 Tailscale [recommends outbound TCP 443 to any destination](https://tailscale.com/kb/1082/firewall-ports)
 because its coordination and DERP relay addresses change. Standard Kubernetes
@@ -203,9 +205,9 @@ partial or intermittent connectivity as the relay fleet changes.
 
 The broad TCP rules are still a meaningful security tradeoff: if the Outpost pod
 is compromised, the policy does not prevent HTTPS exfiltration. The fixed
-`proxyTarget`, non-root container, ephemeral Tailscale identity, and tenant-scoped
-Tailscale ACL reduce exposure during normal operation, but they are not outbound
-destination controls.
+`proxyTarget`, non-root user in the default image, ephemeral Tailscale identity,
+and tenant-scoped Tailscale ACL reduce exposure during normal operation, but they
+are not outbound destination controls.
 
 For environments that require destination-restricted egress, replace
 `networkPolicy.egressRules` in your values file. Helm replaces the complete list;
@@ -218,13 +220,22 @@ still allow:
    translation may change port 443 to 6443 before the network policy is applied.
 3. Cluster DNS over both UDP and TCP 53.
 
-Use `kubectl -n default get endpoints kubernetes -o yaml` to inspect a Kubernetes
-API target. Managed control-plane addresses can change, so prefer a stable
+Use this command to inspect a Kubernetes API target:
+
+```bash
+kubectl -n default get endpointslices -l kubernetes.io/service-name=kubernetes -o yaml
+```
+
+Managed control-plane addresses can change, so prefer a stable
 customer-controlled CIDR or egress policy over individual IP addresses. Validate
 the result with `tailscale netcheck` and requests to the proxied API.
 
 The following shape is illustrative; substitute destinations approved for your
 cluster and egress infrastructure:
+
+This example omits UDP 3478 and 41641. Tailscale cannot use STUN or direct
+WireGuard paths and instead falls back to DERP through the approved egress proxy,
+which can increase latency.
 
 ```yaml
 networkPolicy:
@@ -274,8 +285,9 @@ rbac:
   secrets: false
 ```
 
-`rbac.secrets: false` is the recommended least-privilege setting when Secret
-discovery is not required. The chart default remains `true` for compatibility
+Set `rbac.secrets: true` when SubImage must inventory Kubernetes Secret objects.
+Set it to `false` when that coverage is not required because `list` returns full
+Secret data, not only metadata. The chart default remains `true` for compatibility
 with existing installations and complete discovery coverage.
 
 **How Authentication Works:**
@@ -322,7 +334,9 @@ for SubImage's Kubernetes and EKS discovery:
 
 **Security Note:** Non-resource URL permissions allow discovering which API groups and versions exist, but do **not** grant access to the resources themselves. For example, access to `/apis/apps/v1` allows seeing that the "apps" API group exists, but listing `/apis/apps/v1/deployments` still requires explicit `resources: ["deployments"]` permissions.
 
-**Secrets Note:** `list` on `secrets` returns full Secret data (values), not just metadata. The default `rbac.secrets: true` grants this cluster-wide. If the outpost does not need Secret contents, opt out:
+**Secrets Note:** `list` on `secrets` returns full Secret data (values), not just
+metadata. The default `rbac.secrets: true` grants this cluster-wide. Set it to
+`false` if SubImage does not need to inventory Kubernetes Secret objects:
 
 ```yaml
 rbac:
@@ -579,12 +593,22 @@ per-resource permission toggle currently exposed is `rbac.secrets`; other
 permission changes require a reviewed chart change.
 
 **For non-Kubernetes API targets:**
-The Outpost image supports a bearer token or mounted token file, but this chart
-does not currently expose those settings. Add reviewed chart support before
+The chart sets `BEARER_TOKEN_PATH` to the Kubernetes ServiceAccount token whenever
+`rbac.create: true`, which is the default. The Outpost forwards that token to the
+configured target when the incoming request has no `Authorization` header. Set
+`rbac.create: false` for a non-Kubernetes target so the cluster ServiceAccount
+token is not forwarded.
+
+The Outpost image supports a custom bearer token or mounted token file, but this
+chart does not currently expose those settings. Add reviewed chart support before
 using Outpost with an authenticated non-Kubernetes target; `outpost.extraEnv` is
 not a supported value.
 
 ## Upgrading
+
+Existing releases continue to grant cluster-wide `list` access to Secrets because
+`rbac.secrets` defaults to `true`. To remove that permission during an upgrade,
+set `rbac.secrets: false` in the release values.
 
 ```bash
 helm upgrade my-outpost ./subimage-outpost -f my-values.yaml

@@ -26,7 +26,7 @@ helm repo update
 ### Install a Chart
 
 ```bash
-cp charts/subimage-outpost/values-example.yaml my-values.yaml
+helm show values subimage/subimage-outpost > my-values.yaml
 # Edit my-values.yaml with your tenant ID and auth key, then:
 helm install my-outpost subimage/subimage-outpost -f my-values.yaml
 ```
