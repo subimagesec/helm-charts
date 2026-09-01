@@ -27,7 +27,8 @@ helm repo update
 
 ```bash
 helm show values subimage/subimage-outpost > my-values.yaml
-# Edit my-values.yaml with your tenant ID and auth key, then:
+# Edit my-values.yaml with your tenant ID and auth key. Set rbac.secrets to
+# false unless SubImage should inventory Kubernetes Secret objects. Then run:
 helm install my-outpost subimage/subimage-outpost -f my-values.yaml
 ```
 
