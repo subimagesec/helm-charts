@@ -8,6 +8,12 @@ Public Helm charts for SubImage products.
 |-------|-------------|
 | [subimage-outpost](./charts/subimage-outpost) | Deploy SubImage Outpost with Tailscale in Kubernetes |
 
+This repository currently publishes only the Outpost chart. Outpost is a
+single-purpose proxy that lets SubImage inventory a private Kubernetes cluster.
+It does not install the complete self-hosted SubImage platform, create or manage
+an EKS cluster, or grant SubImage maintenance or administrator access. A
+self-hosted SubImage installation uses separate deployment artifacts.
+
 ## Usage
 
 ### Add the Helm Repository
@@ -20,11 +26,13 @@ helm repo update
 ### Install a Chart
 
 ```bash
-helm install my-outpost subimage/subimage-outpost \
-  --set outpost.tenantId="your-tenant-id" \
-  --set outpost.authKey.value="tskey-client-xxxxx-xxxxxxxxxxxxxx"
+helm show values subimage/subimage-outpost > my-values.yaml
+# Edit my-values.yaml with your tenant ID and auth key. Set rbac.secrets to
+# false unless SubImage should inventory Kubernetes Secret objects. Then run:
+helm install my-outpost subimage/subimage-outpost -f my-values.yaml
 ```
 
+Using a values file keeps the auth key out of shell history and process listings.
 See the [subimage-outpost README](./charts/subimage-outpost/README.md) for detailed configuration options.
 
 ## Development

@@ -17,9 +17,11 @@ outpost:
   proxyTarget: "https://kubernetes.default.svc"
 
   # REQUIRED: Verify TLS certificates
-  # Default: false (Kubernetes API typically uses self-signed certificates)
-  # Set to true only if your target has a valid public certificate
-  verifyTls: false
+  # The default Kubernetes target uses the mounted service account CA. For a
+  # non-Kubernetes target with a private CA, set caBundle to a CA file available
+  # inside the container.
+  verifyTls: true
+  # caBundle: "/path/to/ca-bundle.crt"
 
   # OPTIONAL: Override Host header sent to target
   # Leave empty unless your reverse proxy requires a specific Host header
@@ -104,12 +106,13 @@ resources:
 # Disable if your CNI doesn't support NetworkPolicy
 networkPolicy:
   enabled: true
+  # The defaults allow TCP 443 and 6443 to any destination for portable
+  # Tailscale and Kubernetes API connectivity. See README.md before replacing
+  # egressRules in a destination-restricted environment.
 
 # OPTIONAL: RBAC for Kubernetes API access
 # Required if proxyTarget is the Kubernetes API
 rbac:
   create: true
-  # Grant list permission on Secrets cluster-wide.
-  # Note: `list` returns full Secret data (values), not just metadata.
-  # Set to false to opt out if the outpost does not need Secret contents.
-  secrets: true
+  # Enable only if Secret discovery is required; `list` returns Secret values.
+  secrets: false
