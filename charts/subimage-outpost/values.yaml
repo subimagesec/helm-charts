@@ -233,8 +233,8 @@ rbac:
   create: true
   # Grant list permission on Secrets cluster-wide.
   # Note: `list` returns full Secret data (values), not just metadata.
-  # Set to false to opt out if the outpost does not need Secret contents.
-  secrets: true
+  # Set to true only if the outpost needs Secret contents.
+  secrets: false
 
 # Security context (already removed NET_ADMIN requirement)
 securityContext: {}

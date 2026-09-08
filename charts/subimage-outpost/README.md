@@ -208,7 +208,7 @@ for SubImage's Kubernetes and EKS discovery:
   `list` so SubImage can map pod mounts to their backing volumes, storage
   classes, CSI drivers, and planned volume-to-node attachment state
 - secrets:
-  `secrets` with `list` (opt-out via `rbac.secrets: false` — see note below)
+  `secrets` with `list` (opt-in via `rbac.secrets: true` — see note below)
 - EKS metadata:
   `configmaps` with `get` so the scanner can read `kube-system/aws-auth`
 - workload controllers:
@@ -228,12 +228,12 @@ for SubImage's Kubernetes and EKS discovery:
 
 **Security Note:** Non-resource URL permissions allow discovering which API groups and versions exist, but do **not** grant access to the resources themselves. For example, access to `/apis/apps/v1` allows seeing that the "apps" API group exists, but listing `/apis/apps/v1/deployments` still requires explicit `resources: ["deployments"]` permissions.
 
-**Secrets Note:** `list` on `secrets` returns full Secret data (values), not just metadata. The default `rbac.secrets: true` grants this cluster-wide. If the outpost does not need Secret contents, opt out:
+**Secrets Note:** `list` on `secrets` returns full Secret data (values), not just metadata. The default `rbac.secrets: false` prevents this cluster-wide grant. Enable it only when the outpost needs Secret contents:
 
 ```yaml
 rbac:
   create: true
-  secrets: false
+  secrets: true
 ```
 
 **Important:** The chart does not currently expose `readAll`, `resourceGroups`, or
