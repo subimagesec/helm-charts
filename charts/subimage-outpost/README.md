@@ -220,6 +220,11 @@ for SubImage's Kubernetes and EKS discovery:
   `gateway.networking.k8s.io/gateways` and
   `gateway.networking.k8s.io/httproutes` with `list`. These permissions are
   only used when Gateway API CRDs are installed in the cluster.
+- AWS Load Balancer Controller:
+  `elbv2.k8s.aws/targetgroupbindings` with `list` so SubImage can link AWS
+  load balancer target groups to the Services they route to. This permission is
+  only used when the AWS Load Balancer Controller CRDs are installed in the
+  cluster.
 - RBAC objects:
   `roles`, `rolebindings`, `clusterroles`, and `clusterrolebindings` with `get` /
   `list`

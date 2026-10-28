@@ -46,6 +46,10 @@ rules:
 - apiGroups: ["gateway.networking.k8s.io"]
   resources: ["gateways", "httproutes"]
   verbs: ["list"]
+# AWS Load Balancer Controller TargetGroupBindings
+- apiGroups: ["elbv2.k8s.aws"]
+  resources: ["targetgroupbindings"]
+  verbs: ["list"]
 # RBAC resources
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
