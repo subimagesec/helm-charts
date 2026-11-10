@@ -211,6 +211,7 @@ for SubImage's Kubernetes and EKS discovery:
   `secrets` with `list` (opt-out via `rbac.secrets: false` — see note below)
 - EKS metadata:
   `configmaps` with `get` so the scanner can read `kube-system/aws-auth`
+  (narrow it with `rbac.configMaps` — see note below)
 - workload controllers:
   `apps/deployments`, `apps/replicasets`, `apps/statefulsets`,
   `apps/daemonsets`, `batch/jobs`, and `batch/cronjobs` with `list`
@@ -239,6 +240,16 @@ for SubImage's Kubernetes and EKS discovery:
 rbac:
   create: true
   secrets: false
+```
+
+**ConfigMaps Note:** The default `rbac.configMaps: all` grants `get`, never `list`, on ConfigMaps cluster-wide. SubImage reads `kube-system/aws-auth` to map IAM principals to Kubernetes users and groups on EKS, and the default lets new coverage that reads a ConfigMap work without a chart change. To narrow it:
+
+```yaml
+rbac:
+  create: true
+  # awsAuth: only kube-system/aws-auth, through a Role in kube-system
+  # none:    no ConfigMap access, for clusters that are not EKS
+  configMaps: awsAuth
 ```
 
 **Important:** The chart does not currently expose `readAll`, `resourceGroups`, or
@@ -271,20 +282,64 @@ rbac:
 
 For proxying to services that require authentication beyond Kubernetes API (which is handled automatically via RBAC), you can provide custom bearer tokens:
 
-**Option 1: Direct token via environment variable**
+**Option 1: Token from a Secret, as an environment variable**
 ```yaml
-# values.yaml
-# Note: This requires adding extraEnv support to the chart
-# For now, edit the deployment directly or use a secret
+rbac:
+  create: false
+
+extraEnv:
+  - name: BEARER_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: target-api-token
+        key: token
 ```
 
-**Option 2: Token from file (recommended for security)**
+**Option 2: Token from a mounted file**
+
+The outpost reads the file on each request, so a rotated Secret takes effect without a restart.
+
 ```yaml
-# Mount a secret containing your token
-# Then set BEARER_TOKEN_PATH to point to it
+rbac:
+  create: false
+
+extraVolumes:
+  - name: target-api-token
+    secret:
+      secretName: target-api-token
+
+extraVolumeMounts:
+  - name: target-api-token
+    mountPath: /etc/outpost/token
+    readOnly: true
+
+extraEnv:
+  - name: BEARER_TOKEN_PATH
+    value: /etc/outpost/token/token
 ```
 
-**Note:** When `rbac.create: true`, `BEARER_TOKEN_PATH` is automatically set to the Kubernetes ServiceAccount token path. For custom services, you'll need to disable RBAC (`rbac.create: false`) and provide your own authentication mechanism.
+**Note:** When `rbac.create: true`, `BEARER_TOKEN_PATH` is automatically set to the Kubernetes ServiceAccount token path. For custom services, set `rbac.create: false` and provide the token with one of the options above. `BEARER_TOKEN` takes precedence over `BEARER_TOKEN_PATH`.
+
+#### 8. Extra Environment Variables and Volumes
+
+`extraEnv`, `extraVolumes`, and `extraVolumeMounts` pass through to the outpost pod unchanged. For example, to verify a private target against your own CA:
+
+```yaml
+outpost:
+  proxyTarget: "https://api.internal.example.com"
+  verifyTls: true
+  caBundle: /etc/outpost/ca/ca.crt
+
+extraVolumes:
+  - name: target-ca
+    configMap:
+      name: target-ca
+
+extraVolumeMounts:
+  - name: target-ca
+    mountPath: /etc/outpost/ca
+    readOnly: true
+```
 
 ### All Configuration Options
 
@@ -296,6 +351,7 @@ See [values.yaml](values.yaml) for complete configuration options including:
 - Security context
 - Affinity rules
 - Service account configuration
+- Extra environment variables, volumes, and volume mounts
 
 ## Usage
 

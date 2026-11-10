@@ -60,3 +60,18 @@ If false, use the user-provided authKey.secret.name.
 {{- required "outpost.authKey.secret.name is required when outpost.authKey.secret.create is false" .Values.outpost.authKey.secret.name -}}
 {{- end -}}
 {{- end }}
+
+{{/*
+Validate and return rbac.configMaps.
+*/}}
+{{- define "subimage-outpost.configMapScope" -}}
+{{- /* Only an absent key falls back to "all": helm upgrade --reuse-values from a chart older than 1.6.0 has no rbac.configMaps. */ -}}
+{{- $scope := "all" -}}
+{{- if hasKey .Values.rbac "configMaps" -}}
+{{- $scope = .Values.rbac.configMaps -}}
+{{- end -}}
+{{- if not (has $scope (list "all" "awsAuth" "none")) -}}
+{{- fail (printf "rbac.configMaps must be one of all, awsAuth, none (got %v)" (toJson $scope)) -}}
+{{- end -}}
+{{- $scope -}}
+{{- end }}

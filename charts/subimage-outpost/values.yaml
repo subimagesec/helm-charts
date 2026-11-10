@@ -179,6 +179,26 @@ proxy:
   allProxy: ""
   noProxy: "localhost,127.0.0.1,.svc,.cluster.local"
 
+# Extra environment variables for the outpost container, in Kubernetes
+# EnvVar format. They render after the chart's own variables.
+extraEnv: []
+# - name: BEARER_TOKEN_PATH
+#   value: /etc/outpost/token/token
+
+# Extra pod volumes, in Kubernetes Volume format.
+extraVolumes: []
+# - name: target-ca
+#   configMap:
+#     name: target-ca
+
+# Extra volume mounts for the outpost container, in Kubernetes VolumeMount
+# format. Pair with extraVolumes, for example to mount the file that
+# outpost.caBundle points at.
+extraVolumeMounts: []
+# - name: target-ca
+#   mountPath: /etc/outpost/ca
+#   readOnly: true
+
 # Pod annotations
 podAnnotations: {}
   # Uncomment only if AppArmor interferes (violates baseline PSS on EKS)
@@ -235,6 +255,14 @@ rbac:
   # Note: `list` returns full Secret data (values), not just metadata.
   # Set to false to opt out if the outpost does not need Secret contents.
   secrets: true
+  # Which ConfigMaps the outpost can read (get only, never list).
+  #   all:     every ConfigMap in the cluster. Recommended: new SubImage
+  #            coverage that reads a ConfigMap works without a chart change.
+  #   awsAuth: only kube-system/aws-auth, through a Role in kube-system.
+  #            SubImage reads it to map IAM principals to Kubernetes users
+  #            and groups on EKS.
+  #   none:    no ConfigMap access. For clusters that are not EKS.
+  configMaps: all
 
 # Security context (already removed NET_ADMIN requirement)
 securityContext: {}

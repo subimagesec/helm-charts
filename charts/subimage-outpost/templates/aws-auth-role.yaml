@@ -1,0 +1,30 @@
+{{- if and .Values.rbac.create (eq (include "subimage-outpost.configMapScope" .) "awsAuth") }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "subimage-outpost.fullname" . }}-aws-auth
+  namespace: kube-system
+  labels:
+    {{- include "subimage-outpost.labels" . | nindent 4 }}
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["aws-auth"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "subimage-outpost.fullname" . }}-aws-auth
+  namespace: kube-system
+  labels:
+    {{- include "subimage-outpost.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "subimage-outpost.fullname" . }}-aws-auth
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.serviceAccount.name | default (include "subimage-outpost.fullname" .) }}
+  namespace: {{ .Values.namespace.name }}
+{{- end }}

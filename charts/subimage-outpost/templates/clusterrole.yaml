@@ -27,10 +27,12 @@ rules:
   resources: ["secrets"]
   verbs: ["list"]
 {{- end }}
+{{- if eq (include "subimage-outpost.configMapScope" .) "all" }}
 # ConfigMaps - for aws-auth
 - apiGroups: [""]
   resources: ["configmaps"]
   verbs: ["get"]
+{{- end }}
 # Workload controllers - enable the WORKLOAD_PARENT chain from a pod to its owning controller
 - apiGroups: ["apps"]
   resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
