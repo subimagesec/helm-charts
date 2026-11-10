@@ -65,9 +65,13 @@ If false, use the user-provided authKey.secret.name.
 Validate and return rbac.configMaps.
 */}}
 {{- define "subimage-outpost.configMapScope" -}}
-{{- $scope := .Values.rbac.configMaps | default "all" -}}
+{{- /* Only an absent key falls back to "all": helm upgrade --reuse-values from a chart older than 1.6.0 has no rbac.configMaps. */ -}}
+{{- $scope := "all" -}}
+{{- if hasKey .Values.rbac "configMaps" -}}
+{{- $scope = .Values.rbac.configMaps -}}
+{{- end -}}
 {{- if not (has $scope (list "all" "awsAuth" "none")) -}}
-{{- fail (printf "rbac.configMaps must be one of all, awsAuth, none (got %q)" $scope) -}}
+{{- fail (printf "rbac.configMaps must be one of all, awsAuth, none (got %v)" (toJson $scope)) -}}
 {{- end -}}
 {{- $scope -}}
 {{- end }}
