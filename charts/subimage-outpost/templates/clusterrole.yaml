@@ -27,10 +27,6 @@ rules:
   resources: ["secrets"]
   verbs: ["list"]
 {{- end }}
-# ConfigMaps - for aws-auth
-- apiGroups: [""]
-  resources: ["configmaps"]
-  verbs: ["get"]
 # Workload controllers - enable the WORKLOAD_PARENT chain from a pod to its owning controller
 - apiGroups: ["apps"]
   resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]

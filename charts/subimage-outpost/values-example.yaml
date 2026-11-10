@@ -113,3 +113,21 @@ rbac:
   # Note: `list` returns full Secret data (values), not just metadata.
   # Set to false to opt out if the outpost does not need Secret contents.
   secrets: true
+  # Grant get on kube-system/aws-auth only. Set to false on clusters that are
+  # not EKS.
+  awsAuthConfigMap: true
+
+# OPTIONAL: Extra environment variables, volumes, and volume mounts
+# Example: verify a private target against a CA bundle from a ConfigMap
+# (set outpost.verifyTls: true and outpost.caBundle: /etc/outpost/ca/ca.crt)
+# extraVolumes:
+#   - name: target-ca
+#     configMap:
+#       name: target-ca
+# extraVolumeMounts:
+#   - name: target-ca
+#     mountPath: /etc/outpost/ca
+#     readOnly: true
+# extraEnv:
+#   - name: OUTPOST_LOG_FILE
+#     value: /tmp/outpost.log

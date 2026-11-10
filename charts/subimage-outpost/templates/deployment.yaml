@@ -39,6 +39,10 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.extraVolumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: outpost
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -99,6 +103,13 @@ spec:
           value: {{ .Values.proxy.allProxy | quote }}
         - name: NO_PROXY
           value: {{ .Values.proxy.noProxy | quote }}
+        {{- end }}
+        {{- with .Values.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.extraVolumeMounts }}
+        volumeMounts:
+          {{- toYaml . | nindent 10 }}
         {{- end }}
         {{- if .Values.livenessProbe.enabled }}
         livenessProbe:
