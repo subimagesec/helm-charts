@@ -60,3 +60,14 @@ If false, use the user-provided authKey.secret.name.
 {{- required "outpost.authKey.secret.name is required when outpost.authKey.secret.create is false" .Values.outpost.authKey.secret.name -}}
 {{- end -}}
 {{- end }}
+
+{{/*
+Validate and return rbac.configMaps.
+*/}}
+{{- define "subimage-outpost.configMapScope" -}}
+{{- $scope := .Values.rbac.configMaps | default "all" -}}
+{{- if not (has $scope (list "all" "awsAuth" "none")) -}}
+{{- fail (printf "rbac.configMaps must be one of all, awsAuth, none (got %q)" $scope) -}}
+{{- end -}}
+{{- $scope -}}
+{{- end }}

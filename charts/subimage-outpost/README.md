@@ -210,9 +210,8 @@ for SubImage's Kubernetes and EKS discovery:
 - secrets:
   `secrets` with `list` (opt-out via `rbac.secrets: false` — see note below)
 - EKS metadata:
-  `get` on the `kube-system/aws-auth` ConfigMap only, granted by a `Role` in
-  `kube-system` instead of the `ClusterRole`. The outpost cannot read any
-  other ConfigMap (opt-out via `rbac.awsAuthConfigMap: false` — see note below)
+  `configmaps` with `get` so the scanner can read `kube-system/aws-auth`
+  (narrow it with `rbac.configMaps` — see note below)
 - workload controllers:
   `apps/deployments`, `apps/replicasets`, `apps/statefulsets`,
   `apps/daemonsets`, `batch/jobs`, and `batch/cronjobs` with `list`
@@ -243,12 +242,14 @@ rbac:
   secrets: false
 ```
 
-**aws-auth Note:** SubImage reads `kube-system/aws-auth` to map IAM principals to Kubernetes users and groups on EKS. Clusters that are not EKS, and EKS clusters that only use Access Entries, do not need it:
+**ConfigMaps Note:** The default `rbac.configMaps: all` grants `get`, never `list`, on ConfigMaps cluster-wide. SubImage reads `kube-system/aws-auth` to map IAM principals to Kubernetes users and groups on EKS, and the default lets new coverage that reads a ConfigMap work without a chart change. To narrow it:
 
 ```yaml
 rbac:
   create: true
-  awsAuthConfigMap: false
+  # awsAuth: only kube-system/aws-auth, through a Role in kube-system
+  # none:    no ConfigMap access, for clusters that are not EKS
+  configMaps: awsAuth
 ```
 
 **Important:** The chart does not currently expose `readAll`, `resourceGroups`, or

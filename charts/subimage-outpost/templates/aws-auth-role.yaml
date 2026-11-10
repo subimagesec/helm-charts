@@ -1,4 +1,4 @@
-{{- if and .Values.rbac.create .Values.rbac.awsAuthConfigMap }}
+{{- if and .Values.rbac.create (eq (include "subimage-outpost.configMapScope" .) "awsAuth") }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:

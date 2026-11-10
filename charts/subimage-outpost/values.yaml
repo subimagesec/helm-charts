@@ -255,11 +255,14 @@ rbac:
   # Note: `list` returns full Secret data (values), not just metadata.
   # Set to false to opt out if the outpost does not need Secret contents.
   secrets: true
-  # Grant get on the kube-system/aws-auth ConfigMap, and no other ConfigMap,
-  # through a Role in kube-system. SubImage reads it to map IAM principals to
-  # Kubernetes users and groups on EKS. Set to false on clusters that are not
-  # EKS, or on EKS clusters that only use Access Entries.
-  awsAuthConfigMap: true
+  # Which ConfigMaps the outpost can read (get only, never list).
+  #   all:     every ConfigMap in the cluster. Recommended: new SubImage
+  #            coverage that reads a ConfigMap works without a chart change.
+  #   awsAuth: only kube-system/aws-auth, through a Role in kube-system.
+  #            SubImage reads it to map IAM principals to Kubernetes users
+  #            and groups on EKS.
+  #   none:    no ConfigMap access. For clusters that are not EKS.
+  configMaps: all
 
 # Security context (already removed NET_ADMIN requirement)
 securityContext: {}
