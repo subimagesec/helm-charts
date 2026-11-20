@@ -90,8 +90,10 @@ jobs:
         run: |
           chart="charts/subimage-outpost"
 
-          if helm template test-release "$chart" -f "$chart/values-example.yaml" \
-              --set 'podLabels.app\.kubernetes\.io/name=other' > /dev/null 2>&1; then
-            echo "podLabels overrode a selector label without failing the render"
-            exit 1
-          fi
+          for label in 'app\.kubernetes\.io/name' 'app\.kubernetes\.io/instance'; do
+            if helm template test-release "$chart" -f "$chart/values-example.yaml" \
+                --set "podLabels.${label}=other" > /dev/null 2>&1; then
+              echo "podLabels overrode selector label $label without failing the render"
+              exit 1
+            fi
+          done

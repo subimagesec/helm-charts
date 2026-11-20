@@ -142,7 +142,7 @@ The pod-level and container-level security contexts are `podSecurityContext` and
 
 #### Admission Webhooks and Pod Labels
 
-Mutating admission webhooks can inject sidecars or volumes into every pod. An injected `hostPath` volume or privileged container makes the pod fail the `baseline` and `restricted` levels, so the namespace rejects it and the install times out. Most webhooks let a pod opt out with a label. Set it with `podLabels`.
+Mutating admission webhooks can inject sidecars or volumes into every pod. An injected `hostPath` volume or privileged container makes the pod fail the `baseline` and `restricted` levels, so the namespace rejects it. The Deployment then has no pod, and `helm install --wait` times out. Most webhooks let a pod opt out with a label. Set it with `podLabels`.
 
 For example, on a cluster running Datadog's admission controller, which injects a `hostPath` volume:
 
