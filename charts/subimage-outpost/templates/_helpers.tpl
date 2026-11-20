@@ -75,3 +75,20 @@ Validate and return rbac.configMaps.
 {{- end -}}
 {{- $scope -}}
 {{- end }}
+
+{{/*
+Pod template labels: selector labels plus podLabels. Selector labels are
+immutable on a Deployment, so overriding one would orphan the running pod.
+*/}}
+{{- define "subimage-outpost.podLabels" -}}
+{{- $selector := include "subimage-outpost.selectorLabels" . | fromYaml -}}
+{{- range $key, $value := .Values.podLabels -}}
+{{- if hasKey $selector $key -}}
+{{- fail (printf "podLabels cannot set the selector label %s" $key) -}}
+{{- end -}}
+{{- end -}}
+{{- include "subimage-outpost.selectorLabels" . }}
+{{- range $key, $value := .Values.podLabels }}
+{{ $key }}: {{ $value | toString | quote }}
+{{- end }}
+{{- end }}

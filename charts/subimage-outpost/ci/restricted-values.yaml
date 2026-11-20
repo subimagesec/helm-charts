@@ -1,0 +1,60 @@
+# CI values: a namespace that enforces the restricted Pod Security Standard,
+# a cluster running Datadog's admission controller, and a strict egress
+# policy. The CIDRs are documentation ranges (RFC 5737, RFC 3849); replace
+# them with the addresses listed in README.md before using this file.
+outpost:
+  tenantId: "acme"
+  authKey:
+    value: "tskey-client-xxxxx-xxxxxxxxxxxxxx"
+
+namespace:
+  podSecurity:
+    enforce: "restricted"
+    audit: "restricted"
+    warn: "restricted"
+
+podLabels:
+  admission.datadoghq.com/enabled: "false"
+
+networkPolicy:
+  enabled: true
+  egressRules:
+    # Cluster DNS
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: kube-system
+      ports:
+      - protocol: UDP
+        port: 53
+      - protocol: TCP
+        port: 53
+    # Kubernetes API server endpoint (kubectl get endpoints kubernetes -n default)
+    - to:
+      - ipBlock:
+          cidr: 192.0.2.10/32
+      ports:
+      - protocol: TCP
+        port: 443
+    # Tailscale API, control plane, logging and DERP relays
+    - to:
+      - ipBlock:
+          cidr: 198.51.100.0/24
+      - ipBlock:
+          cidr: 2001:db8::/48
+      ports:
+      - protocol: TCP
+        port: 443
+      - protocol: TCP
+        port: 80
+      - protocol: UDP
+        port: 3478
+    # Direct WireGuard to SubImage's tailnet peers
+    - to:
+      - ipBlock:
+          cidr: 0.0.0.0/0
+      - ipBlock:
+          cidr: ::/0
+      ports:
+      - protocol: UDP
+        port: 41641
