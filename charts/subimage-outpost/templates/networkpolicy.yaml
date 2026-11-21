@@ -13,5 +13,5 @@ spec:
   policyTypes:
     - Egress
   egress:
-    {{- toYaml .Values.networkPolicy.egressRules | nindent 4 }}
+    {{- concat (.Values.networkPolicy.egressRules | default list) (.Values.networkPolicy.extraEgressRules | default list) | toYaml | nindent 4 }}
 {{- end }}

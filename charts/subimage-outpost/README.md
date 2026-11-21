@@ -122,17 +122,36 @@ proxy:
   noProxy: "localhost,127.0.0.1,.svc,.cluster.local"
 ```
 
-#### 2. Restrictive Pod Security Standards
+#### 2. Pod Security Standards
 
-If your cluster enforces strict PSS, use baseline level:
+The outpost pod meets the `restricted` Pod Security Standard with the default values. It runs as a non-root user (UID 10001), drops all Linux capabilities, blocks privilege escalation, and uses the `RuntimeDefault` seccomp profile. Tailscale runs in userspace networking mode, so the pod needs no `NET_ADMIN` capability and no host access.
+
+When the chart creates the namespace, it enforces `baseline` and audits and warns at `restricted`. To enforce `restricted`:
 
 ```yaml
 namespace:
   podSecurity:
-    enforce: "baseline"  # or "privileged" for very restrictive environments
-    audit: "baseline"
-    warn: "baseline"
+    enforce: "restricted"
+    audit: "restricted"
+    warn: "restricted"
 ```
+
+If you deploy into an existing namespace (`namespace.create: false`), that namespace's own Pod Security labels apply. The pod is admitted at any level, as long as no admission webhook injects a container or volume that the level rejects. See [Admission Webhooks and Pod Labels](#admission-webhooks-and-pod-labels).
+
+The pod-level and container-level security contexts are `podSecurityContext` and `securityContext` in [values.yaml](values.yaml).
+
+#### Admission Webhooks and Pod Labels
+
+Mutating admission webhooks can inject sidecars or volumes into every pod. An injected `hostPath` volume or privileged container makes the pod fail the `baseline` and `restricted` levels, so the namespace rejects it. The Deployment then has no pod, and `helm install --wait` times out. Most webhooks let a pod opt out with a label. Set it with `podLabels`.
+
+For example, on a cluster running Datadog's admission controller, which injects a `hostPath` volume:
+
+```yaml
+podLabels:
+  admission.datadoghq.com/enabled: "false"
+```
+
+`podLabels` adds labels to the pod template only. The selector labels `app.kubernetes.io/name` and `app.kubernetes.io/instance` are reserved, and setting either one fails the render. For annotation-based opt-outs, use `podAnnotations`.
 
 #### 3. Tainted Nodes
 
@@ -163,15 +182,66 @@ namespace:
 
 #### 5. Network-Restricted Clusters
 
-For clusters with strict NetworkPolicies:
+The chart creates an egress NetworkPolicy for the outpost pod. The default rules work in IPv4-only, IPv6-only, and dual-stack clusters without any cluster-specific addresses:
+
+| Destination | Ports | Why |
+|-------------|-------|-----|
+| Any address | TCP 443 | Tailscale control plane, logging, and DERP relays; the Kubernetes API on managed clusters; `outpost.proxyTarget` |
+| Any address | TCP 6443 | The Kubernetes API on self-managed clusters, where the `kubernetes` Service endpoints are node IPs |
+| Any address | UDP 3478, UDP 41641 | STUN and direct WireGuard connections. Without them, Tailscale relays all traffic through DERP over TCP 443 |
+| `kube-system` namespace | UDP 53, TCP 53 | Cluster DNS |
+
+TCP 443 stays open to any address by default because Tailscale serves its control plane and DERP relays from addresses that change over time, and the chart cannot know where `outpost.proxyTarget` lives.
+
+**Add a destination.** Use `networkPolicy.extraEgressRules` to append rules without copying the defaults. For example, if `outpost.proxyTarget` is an in-cluster Service whose pods listen on port 8443:
 
 ```yaml
 networkPolicy:
-  enabled: true
-  # Egress rules are pre-configured for Tailscale and Kubernetes API access
-  # in IPv4-only, IPv6-only, and dual-stack clusters.
-  # Edit values.yaml to add custom rules if needed
+  extraEgressRules:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: internal-api
+      ports:
+        - protocol: TCP
+          port: 8443
 ```
+
+NetworkPolicy matches the port the destination pod listens on, not the Service port.
+
+**Cilium with a self-managed control plane.** Cilium does not match node addresses against `ipBlock` rules, so on a cluster where the API server runs on the node network (kubeadm, RKE, minikube) the default rules do not reach it and requests to `outpost.proxyTarget` time out. Allow the API server with a CiliumNetworkPolicy. Use the port that `kubectl get endpointslices kubernetes -n default` shows:
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: subimage-outpost-apiserver
+  namespace: subimage-outpost
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: subimage-outpost
+      app.kubernetes.io/instance: subimage-outpost # your Helm release name
+  egress:
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+```
+
+**Run a strict policy.** Replace `networkPolicy.egressRules` to allow only the addresses the outpost needs:
+
+1. Cluster DNS: UDP and TCP 53 to `kube-system`.
+2. The Kubernetes API server endpoints. Find them with `kubectl get endpoints kubernetes -n default`.
+3. Tailscale's API, control plane, and logging ranges, and the DERP relays your tailnet uses. At startup the outpost calls `api.tailscale.com` on TCP 443 to exchange its OAuth client secret for an auth key. Tailscale lists them in [What firewall ports should I open to use Tailscale?](https://tailscale.com/kb/1082/firewall-ports) and publishes the DERP relay addresses in its [DERP map](https://login.tailscale.com/derpmap/default).
+4. UDP 3478 to the DERP relays and UDP 41641 to any address, unless you accept relayed connections only.
+5. The address of `outpost.proxyTarget`, if it is not the Kubernetes API.
+
+[`ci/restricted-values.yaml`](ci/restricted-values.yaml) shows the shape of a strict policy with placeholder addresses. Tailscale changes these addresses over time. When a strict policy falls out of date, the outpost cannot reach Tailscale and goes offline, so review it whenever Tailscale updates its list.
+
+To manage egress yourself, set `networkPolicy.enabled: false`.
 
 #### 6. Kubernetes API Access (RBAC)
 
@@ -474,11 +544,13 @@ kubectl get secret -n subimage-outpost <release-name>-subimage-outpost-secrets -
 kubectl get networkpolicy -n subimage-outpost
 
 # 3. Verify IPv4 and IPv6 egress is allowed to:
-# - TCP 443 (Tailscale control plane and Kubernetes API service addresses)
+# - TCP 443 (Tailscale control plane, DERP relays and Kubernetes API service addresses)
 # - TCP 6443 (Kubernetes API on self-managed clusters: kubeadm, RKE, most on-prem)
-# - UDP 3478 (STUN/DERP)
-# - UDP 41641 (DERP)
+# - UDP 3478 (STUN)
+# - UDP 41641 (direct WireGuard)
 # - UDP 53 and TCP 53 (cluster DNS; TCP is the glibc fallback for truncated replies)
+# With a strict networkPolicy.egressRules, also check that Tailscale has not
+# changed the addresses it serves from.
 
 # 3b. Confirm which port your API server endpoints actually use. If this shows
 # 6443 and egress to 6443 is blocked, the SYN is dropped rather than refused,
@@ -565,6 +637,12 @@ outpost:
 helm upgrade my-outpost ./subimage-outpost -f my-values.yaml
 ```
 
+### Upgrading to 1.7.0
+
+- The default egress rules no longer allow TCP 443 and 6443 to every pod in the cluster. If `outpost.proxyTarget` is an in-cluster Service, allow its pods with `networkPolicy.extraEgressRules`. Releases that set `networkPolicy.egressRules` themselves are unaffected.
+- The pod now runs with `runAsNonRoot`, the `RuntimeDefault` seccomp profile, `allowPrivilegeEscalation: false`, and all capabilities dropped. If you set `securityContext`, Helm merges your keys over these defaults.
+- A chart-created namespace now audits and warns at the `restricted` Pod Security level. Enforcement stays at `baseline`.
+
 ## Uninstallation
 
 ```bash
@@ -581,7 +659,7 @@ kubectl delete namespace subimage-outpost
 1. **Ephemeral Nodes**: The chart automatically appends `?ephemeral=true` to auth keys, ensuring Tailscale nodes are removed when pods are deleted
 2. **Secrets Management**: Consider using external secret managers (AWS Secrets Manager, HashiCorp Vault)
 3. **Network Policies**: The chart creates NetworkPolicy by default - ensure your CNI supports it
-4. **Pod Security**: The chart uses `baseline` PSS by default - adjust based on security requirements
+4. **Pod Security**: The outpost pod meets the `restricted` Pod Security Standard. A chart-created namespace enforces `baseline` and warns at `restricted` by default
 5. **Resource Limits**: Configure appropriate limits to prevent resource exhaustion
 
 ## Limitations

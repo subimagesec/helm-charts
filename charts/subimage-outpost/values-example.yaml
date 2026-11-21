@@ -80,15 +80,23 @@ image:
 #     value: "outpost"
 #     effect: "NoSchedule"
 
+# OPTIONAL: Pod labels
+# Opt the pod out of admission webhooks that inject sidecars or volumes the
+# namespace's Pod Security level rejects, for example Datadog's admission
+# controller:
+# podLabels:
+#   admission.datadoghq.com/enabled: "false"
+
 # OPTIONAL: Pod Security Standards
-# Change if your cluster requires different PSS levels
+# The outpost pod meets "restricted". Change if your cluster requires
+# different PSS levels.
 namespace:
   create: true
   name: "subimage-outpost"
   podSecurity:
     enforce: "baseline"  # Options: privileged, baseline, restricted
-    audit: "baseline"
-    warn: "baseline"
+    audit: "restricted"
+    warn: "restricted"
 
 # OPTIONAL: Resource limits
 # Adjust based on your cluster capacity

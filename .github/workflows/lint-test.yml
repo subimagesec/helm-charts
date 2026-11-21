@@ -47,7 +47,15 @@ jobs:
         uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
 
       - name: Lint ${{ matrix.chart }}
-        run: helm lint charts/${{ matrix.chart }}
+        run: |
+          chart="charts/${{ matrix.chart }}"
+
+          helm lint "$chart"
+
+          shopt -s nullglob
+          for values in "$chart"/ci/*-values.yaml; do
+            helm lint "$chart" -f "$values"
+          done
 
   template:
     needs: discover
@@ -70,3 +78,22 @@ jobs:
           chart="charts/${{ matrix.chart }}"
 
           helm template test-release "$chart" -f "$chart/values-example.yaml" > /dev/null
+
+          shopt -s nullglob
+          for values in "$chart"/ci/*-values.yaml; do
+            echo "Templating with $values"
+            helm template test-release "$chart" -f "$values" > /dev/null
+          done
+
+      - name: Reject podLabels that override selector labels
+        if: matrix.chart == 'subimage-outpost'
+        run: |
+          chart="charts/subimage-outpost"
+
+          for label in 'app\.kubernetes\.io/name' 'app\.kubernetes\.io/instance'; do
+            if helm template test-release "$chart" -f "$chart/values-example.yaml" \
+                --set "podLabels.${label}=other" > /dev/null 2>&1; then
+              echo "podLabels overrode selector label $label without failing the render"
+              exit 1
+            fi
+          done
