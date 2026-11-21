@@ -221,6 +221,7 @@ spec:
   endpointSelector:
     matchLabels:
       app.kubernetes.io/name: subimage-outpost
+      app.kubernetes.io/instance: subimage-outpost # your Helm release name
   egress:
     - toEntities:
         - kube-apiserver
