@@ -209,6 +209,27 @@ networkPolicy:
 
 NetworkPolicy matches the port the destination pod listens on, not the Service port.
 
+**Cilium with a self-managed control plane.** Cilium does not match node addresses against `ipBlock` rules, so on a cluster where the API server runs on the node network (kubeadm, RKE, minikube) the default rules do not reach it and requests to `outpost.proxyTarget` time out. Allow the API server with a CiliumNetworkPolicy. Use the port that `kubectl get endpointslices kubernetes -n default` shows:
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: subimage-outpost-apiserver
+  namespace: subimage-outpost
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: subimage-outpost
+  egress:
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+```
+
 **Run a strict policy.** Replace `networkPolicy.egressRules` to allow only the addresses the outpost needs:
 
 1. Cluster DNS: UDP and TCP 53 to `kube-system`.
