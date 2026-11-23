@@ -87,13 +87,16 @@ namespace:
   create: true
   name: "subimage-outpost"
 
-  # Pod Security Standards
-  # Set to "privileged" to bypass most restrictions
-  # Options: privileged, baseline, restricted
+  # Pod Security Standards labels for the namespace (only applied when
+  # namespace.create is true). Options: privileged, baseline, restricted.
+  # The outpost pod meets "restricted" with the default securityContext and
+  # podSecurityContext. enforce stays "baseline" so a sidecar or volume that
+  # another admission webhook injects does not block an upgrade; audit and
+  # warn report any restricted violation so you can raise enforce safely.
   podSecurity:
     enforce: "baseline"
-    audit: "baseline"
-    warn: "baseline"
+    audit: "restricted"
+    warn: "restricted"
 
   # Labels for service mesh exemption
   labels:
@@ -123,12 +126,15 @@ networkPolicy:
   # Enable NetworkPolicy to allow Tailscale egress
   enabled: true
 
-  # Allow egress to Tailscale control plane and DERP servers
+  # networkPolicy.egressRules: the default egress allow list. Replace the
+  # whole list to run a stricter policy (see "Network-Restricted Clusters" in
+  # README.md). Port 443 stays open to any address because Tailscale's control
+  # plane, logging and DERP relays all serve on 443 from addresses Tailscale
+  # changes over time, and outpost.proxyTarget can be any HTTPS endpoint.
   egressRules:
-    # Tailscale control plane and Kubernetes API service addresses (HTTPS).
-    # 6443 is here and not only under the namespaceSelector rule below because
-    # the kubernetes.default.svc endpoints are node IPs on self-managed
-    # clusters, and a namespaceSelector only ever matches pods.
+    # Tailscale control plane, DERP relays and the Kubernetes API (HTTPS).
+    # 6443 is here because the kubernetes.default.svc endpoints are node IPs
+    # on self-managed clusters (kubeadm, RKE), which no pod selector matches.
     - to:
       - ipBlock:
           cidr: 0.0.0.0/0
@@ -139,7 +145,8 @@ networkPolicy:
         port: 443
       - protocol: TCP
         port: 6443
-    # STUN/DERP (UDP)
+    # STUN (3478) and direct WireGuard (41641). Without them Tailscale still
+    # connects, but relays every packet through DERP over TCP 443.
     - to:
       - ipBlock:
           cidr: 0.0.0.0/0
@@ -162,14 +169,18 @@ networkPolicy:
         port: 53
       - protocol: TCP
         port: 53
-    # Kubernetes API (for proxy target)
-    - to:
-      - namespaceSelector: {}
-      ports:
-      - protocol: TCP
-        port: 443
-      - protocol: TCP
-        port: 6443
+
+  # networkPolicy.extraEgressRules: rules appended after egressRules, so you
+  # can allow one more destination without copying the defaults. For example,
+  # when outpost.proxyTarget is a Service whose pods listen on 8443:
+  # - to:
+  #   - namespaceSelector:
+  #       matchLabels:
+  #         kubernetes.io/metadata.name: internal-api
+  #   ports:
+  #   - protocol: TCP
+  #     port: 8443
+  extraEgressRules: []
 
 # Proxy configuration for corporate environments
 proxy:
@@ -203,6 +214,16 @@ extraVolumeMounts: []
 podAnnotations: {}
   # Uncomment only if AppArmor interferes (violates baseline PSS on EKS)
   # container.apparmor.security.beta.kubernetes.io/outpost: "unconfined"
+
+# podLabels: extra labels for the outpost pod. Admission webhooks often key on
+# pod labels, so this is how you opt the pod out of an injection that the
+# namespace's Pod Security level would reject. The selector labels
+# app.kubernetes.io/name and app.kubernetes.io/instance are reserved; setting
+# either fails the render. Values are rendered as strings.
+podLabels: {}
+  # Stop Datadog's admission controller from injecting a hostPath volume,
+  # which the baseline and restricted Pod Security levels reject.
+  # admission.datadoghq.com/enabled: "false"
 
 # Node selection
 nodeSelector: {}
@@ -264,8 +285,21 @@ rbac:
   #   none:    no ConfigMap access. For clusters that are not EKS.
   configMaps: all
 
-# Security context (already removed NET_ADMIN requirement)
-securityContext: {}
-  # capabilities:
-  #   add: []
-  #   drop: []
+# podSecurityContext: pod-level security context. The defaults, with
+# securityContext below, satisfy the "restricted" Pod Security Standard. The
+# image runs as UID 10001, so runAsNonRoot holds without pinning a UID, which
+# would conflict with platforms that assign one (OpenShift).
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+# securityContext: container-level security context. Tailscale runs in
+# userspace networking mode, so the outpost needs no Linux capabilities.
+# readOnlyRootFilesystem stays unset because tailscaled and the log tee write
+# to the image filesystem (/var/run/tailscale, /tmp).
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
