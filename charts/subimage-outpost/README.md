@@ -9,10 +9,12 @@ Deploy SubImage Outpost with Tailscale in restrictive Kubernetes environments. T
 - [Installation](#installation)
   - [Before You Begin](#before-you-begin)
   - [Quick Start](#quick-start)
+  - [Verify a Release](#verify-a-release)
 - [Configuration](#configuration)
   - [Required Values](#required-values)
   - [Common Configurations](#common-configurations)
   - [RBAC for Kubernetes API Access](#6-kubernetes-api-access-rbac)
+  - [Image Version and Digest](#9-image-version-and-digest)
 - [Usage](#usage)
   - [Verify Deployment](#verify-deployment)
   - [Access via Tailscale](#access-via-tailscale)
@@ -67,14 +69,80 @@ outpost:
   # name: "subimage"  # Optional - only needed for multiple outposts
 EOF
 
-helm install my-outpost ./subimage-outpost -f my-values.yaml
+helm repo add subimage https://subimagesec.github.io/helm-charts/
+helm install my-outpost subimage/subimage-outpost -f my-values.yaml
 ```
+
+Starting with chart 1.7.2, you can also install from the OCI registry at `oci://ghcr.io/subimagesec/charts/subimage-outpost`. This skips the Helm repository index. Pin the chart by digest to get exactly the package you verified:
+
+```bash
+helm install my-outpost \
+  oci://ghcr.io/subimagesec/charts/subimage-outpost@sha256:<digest> \
+  -f my-values.yaml
+```
+
+Digest references need Helm 3.17 or later. [Verify a Release](#verify-a-release) shows how to find and check the digest.
 
 > **Security Note**: Always use a values file (`-f`) for sensitive data like `authKey`. Avoid passing secrets via `--set` on the command line, as they are exposed in shell history and process listings.
 
 **Important Notes:**
 - The Tailscale hostname will be: `{tenantId}-{name}-outpost` (e.g., `veriff-subimage-outpost`)
 - The default `name` is `subimage` - only override if deploying multiple outposts for the same tenant
+
+### Verify a Release
+
+Each chart version is an immutable GitHub release named `subimage-outpost-<version>`. GitHub signs an attestation for each release and its assets. You can check that a chart package is the one Subimage published before you install it.
+
+The Helm repository index lives on the `gh-pages` branch, which release immutability does not cover. For the strongest guarantee, verify the package itself and install from the verified file or from an OCI digest.
+
+Set the version you want to check:
+
+```bash
+VERSION=1.7.2
+```
+
+Verify the release:
+
+```bash
+gh release verify "subimage-outpost-$VERSION" -R subimagesec/helm-charts
+```
+
+This command checks that the release has a valid attestation signed by GitHub. It proves that the release tag resolves to the commit it was published from, and it prints the SHA-256 digest of each asset the attestation covers.
+
+Download the chart package and verify it against the release:
+
+```bash
+gh release download "subimage-outpost-$VERSION" -R subimagesec/helm-charts \
+  -p "subimage-outpost-$VERSION.tgz"
+gh release verify-asset "subimage-outpost-$VERSION" "subimage-outpost-$VERSION.tgz" \
+  -R subimagesec/helm-charts
+```
+
+This command proves that the file you downloaded is byte-for-byte the asset attached to the release. You can then install from that file:
+
+```bash
+helm install my-outpost "subimage-outpost-$VERSION.tgz" -f my-values.yaml
+```
+
+#### Verify the OCI chart (chart 1.7.2 and later)
+
+The release workflow pushes the same package to `oci://ghcr.io/subimagesec/charts/subimage-outpost` and signs a build provenance attestation for it. These commands work for chart 1.7.2 and later.
+
+Print the digest of a version:
+
+```bash
+helm pull oci://ghcr.io/subimagesec/charts/subimage-outpost --version "$VERSION"
+```
+
+Helm prints the manifest digest on the `Digest:` line. Verify that digest:
+
+```bash
+gh attestation verify \
+  oci://ghcr.io/subimagesec/charts/subimage-outpost@sha256:<digest> \
+  -R subimagesec/helm-charts
+```
+
+This command proves that the release workflow in `subimagesec/helm-charts` pushed that exact chart. Install it by the same digest, as shown in [Quick Start](#quick-start). The pulled `.tgz` is also byte-for-byte the GitHub release asset, so `gh release verify-asset` accepts it.
 
 ## Configuration
 
@@ -411,6 +479,36 @@ extraVolumeMounts:
     readOnly: true
 ```
 
+#### 9. Image Version and Digest
+
+By default, the chart runs the outpost version in its `appVersion` and pins it by digest. GHCR tags can move, so a digest makes sure every install of a chart version runs the same image. For chart 1.7.2, the default renders this image:
+
+```yaml
+image: "ghcr.io/subimagesec/subimage-outpost:1.2.5@sha256:872f84f2eff37c8b567c114cc95df79dc7657f779179b60b4820b9c975bbb7d9"
+```
+
+`image.tag` defaults to `""`, which means the chart's `appVersion`. `image.digest` holds the digest of that image's multi-arch index. CI fails when `image.digest` differs from what the registry serves for the `appVersion` tag. To compare it yourself, check the `Digest:` line of:
+
+```bash
+docker buildx imagetools inspect ghcr.io/subimagesec/subimage-outpost:1.2.5
+```
+
+To run a different version, set `image.tag`. The chart then pulls that tag and ignores `image.digest`, because the default digest belongs to the `appVersion` image:
+
+```yaml
+image:
+  tag: "1.2.6"
+```
+
+To pin your own version by digest, put the digest in the tag:
+
+```yaml
+image:
+  tag: "1.2.6@sha256:<digest>"
+```
+
+If you mirror the image to a private registry and leave `image.tag` empty, the chart pins your mirror to the same digest. A copy that keeps the multi-arch index, such as `crane copy` or `skopeo copy --all`, keeps that digest. If your mirror changes the digest, set `image.digest` to your mirror's digest, or to `""` to pull by tag.
+
 ### All Configuration Options
 
 See [values.yaml](values.yaml) for complete configuration options including:
@@ -518,7 +616,7 @@ kubectl describe pod -n subimage-outpost -l app.kubernetes.io/name=subimage-outp
 ### ImagePullBackOff
 
 **Symptom**: Cannot pull image from ghcr.io
-**Solution**: The image is public and should be accessible without authentication. Check network connectivity to ghcr.io and verify the image tag exists.
+**Solution**: The image is public and should be accessible without authentication. Check network connectivity to ghcr.io and verify the image tag exists. If you pull from a mirror, check that it serves the digest in `image.digest`. See [Image Version and Digest](#9-image-version-and-digest).
 
 ### No Logs Visible
 
@@ -636,6 +734,15 @@ outpost:
 ```bash
 helm upgrade my-outpost ./subimage-outpost -f my-values.yaml
 ```
+
+### Upgrading to 1.7.2
+
+- The chart pins the outpost image by digest. The default render is `ghcr.io/subimagesec/subimage-outpost:1.2.5@sha256:872f84f2...bbb7d9`.
+- `image.tag` now defaults to `""`, which means the chart's `appVersion`. A new `image.digest` value holds the pinned digest.
+- If you set `image.tag`, nothing changes: the chart runs your tag and ignores the default digest.
+- If you mirror the image and leave `image.tag` empty, the mirror must serve the same digest. Otherwise, set `image.digest` as described in [Image Version and Digest](#9-image-version-and-digest).
+- `app.kubernetes.io/version` now reports the version in `image.tag` when you set one, instead of always reporting the chart's `appVersion`.
+- The chart is also published to `oci://ghcr.io/subimagesec/charts/subimage-outpost`. See [Verify a Release](#verify-a-release).
 
 ### Upgrading to 1.7.0
 

@@ -34,9 +34,7 @@ Common labels
 {{- define "subimage-outpost.labels" -}}
 helm.sh/chart: {{ include "subimage-outpost.chart" . }}
 {{ include "subimage-outpost.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
+app.kubernetes.io/version: {{ include "subimage-outpost.appVersion" . | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
@@ -91,4 +89,35 @@ immutable on a Deployment, so overriding one would orphan the running pod.
 {{- range $key, $value := .Values.podLabels }}
 {{ $key }}: {{ $value | toString | quote }}
 {{- end }}
+{{- end }}
+
+{{/*
+Container image reference. The default image.digest belongs to the appVersion
+image, so a user-set image.tag runs that tag alone instead of pairing it with
+a digest of a different image.
+*/}}
+{{- define "subimage-outpost.image" -}}
+{{- $repository := required "image.repository is required" .Values.image.repository -}}
+{{- $tag := .Values.image.tag | default "" | toString -}}
+{{- $digest := .Values.image.digest | default "" | toString -}}
+{{- if $tag -}}
+{{- printf "%s:%s" $repository $tag -}}
+{{- else if $digest -}}
+{{- if not (regexMatch "^sha256:[a-f0-9]{64}$" $digest) -}}
+{{- fail (printf "image.digest must look like sha256:<64 hex characters> (got %q)" $digest) -}}
+{{- end -}}
+{{- printf "%s:%s@%s" $repository .Chart.AppVersion $digest -}}
+{{- else -}}
+{{- printf "%s:%s" $repository .Chart.AppVersion -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Version of the image the pod runs, for the app.kubernetes.io/version label.
+A tag may carry its own digest ("1.2.6@sha256:..."), which a label value
+cannot hold.
+*/}}
+{{- define "subimage-outpost.appVersion" -}}
+{{- $tag := .Values.image.tag | default "" | toString | splitList "@" | first -}}
+{{- $tag | default .Chart.AppVersion | trunc 63 | trimSuffix "-" -}}
 {{- end }}

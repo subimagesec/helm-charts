@@ -5,7 +5,7 @@ Your SubImage Outpost has been deployed to namespace: {{ .Values.namespace.name 
 📊 Deployment Status:
   Release Name: {{ .Release.Name }}
   Chart Version: {{ .Chart.Version }}
-  Image Version: {{ .Values.image.tag }}
+  Image: {{ include "subimage-outpost.image" . }}
   {{- if .Values.outpost.tenantId }}
   Tenant ID: {{ .Values.outpost.tenantId }}
   Tailscale Hostname: {{ printf "%s-%s-outpost" .Values.outpost.tenantId .Values.outpost.name }}

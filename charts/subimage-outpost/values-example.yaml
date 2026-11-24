@@ -48,13 +48,14 @@ outpost:
   #     key: "TAILSCALE_AUTHKEY"
 
 # Image configuration
-# Uses the official SubImage Outpost image from GitHub Container Registry.
-# The tag is intentionally not pinned here so the example follows the chart
-# default in values.yaml. Pinning it in both places let this file drift two
-# releases behind. Uncomment to pin a specific version.
+# Uses the official Subimage Outpost image from GitHub Container Registry.
+# The tag and digest are intentionally not set here so the example follows
+# the chart default: the chart's appVersion, pinned by digest. Pinning them in
+# both places let this file drift two releases behind. A tag you set runs
+# without the chart's digest; to pin your own, include it in the tag.
 image:
   repository: ghcr.io/subimagesec/subimage-outpost
-  # tag: "1.2.5"
+  # tag: "1.2.6@sha256:<digest>"
   pullPolicy: IfNotPresent
 
 # OPTIONAL: Corporate proxy configuration

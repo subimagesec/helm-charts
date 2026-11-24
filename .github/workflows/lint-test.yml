@@ -12,6 +12,9 @@ on:
       - 'charts/**'
       - '.github/workflows/lint-test.yml'
 
+permissions:
+  contents: read
+
 jobs:
   discover:
     runs-on: ubuntu-latest
@@ -97,3 +100,47 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Check the rendered image reference
+        if: matrix.chart == 'subimage-outpost'
+        run: |
+          set -o pipefail
+          chart="charts/subimage-outpost"
+          repository="ghcr.io/subimagesec/subimage-outpost"
+          app_version=$(helm show chart "$chart" | sed -n 's/^appVersion: //p' | tr -d "\"'")
+
+          render_image() {
+            helm template test-release "$chart" -f "$chart/values-example.yaml" \
+              --show-only templates/deployment.yaml "$@" | sed -n 's/^ *image: "\(.*\)"$/\1/p'
+          }
+
+          default_image=$(render_image)
+          if [[ ! "$default_image" =~ ^"$repository:$app_version"@sha256:[0-9a-f]{64}$ ]]; then
+            echo "Default render is not pinned to the appVersion by digest: $default_image"
+            exit 1
+          fi
+
+          override_image=$(render_image --set image.tag=9.9.9)
+          if [[ "$override_image" != "$repository:9.9.9" ]]; then
+            echo "image.tag=9.9.9 rendered $override_image, expected $repository:9.9.9 without the default digest"
+            exit 1
+          fi
+
+      # GHCR tags are mutable, so this also fails if the appVersion tag is
+      # repointed after the digest was pinned.
+      - name: Check image.digest matches the registry
+        if: matrix.chart == 'subimage-outpost'
+        run: |
+          set -o pipefail
+          chart="charts/subimage-outpost"
+
+          image=$(helm template test-release "$chart" -f "$chart/values-example.yaml" \
+            --show-only templates/deployment.yaml | sed -n 's/^ *image: "\(.*\)"$/\1/p')
+          pinned="${image#*@}"
+          registry=$(docker buildx imagetools inspect "${image%@*}" --format '{{json .Manifest}}' | jq -r .digest)
+
+          if [[ "$pinned" != "$registry" ]]; then
+            echo "image.digest is $pinned but ${image%@*} resolves to $registry. Update image.digest in $chart/values.yaml."
+            exit 1
+          fi
+          echo "${image%@*} resolves to $pinned"

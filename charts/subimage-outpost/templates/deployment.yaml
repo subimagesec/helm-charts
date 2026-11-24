@@ -49,7 +49,7 @@ spec:
       {{- end }}
       containers:
       - name: outpost
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        image: {{ include "subimage-outpost.image" . | quote }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         {{- with .Values.securityContext }}
         securityContext:
