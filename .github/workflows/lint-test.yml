@@ -126,6 +126,13 @@ jobs:
             exit 1
           fi
 
+          version_label=$(helm template test-release "$chart" -f "$chart/values-example.yaml" \
+            --show-only templates/deployment.yaml | sed -n 's/^ *app.kubernetes.io\/version: "\(.*\)"$/\1/p' | head -n 1)
+          if [[ "$version_label" != "$app_version" ]]; then
+            echo "app.kubernetes.io/version rendered \"$version_label\", expected $app_version"
+            exit 1
+          fi
+
       # GHCR tags are mutable, so this also fails if the appVersion tag is
       # repointed after the digest was pinned.
       - name: Check image.digest matches the registry

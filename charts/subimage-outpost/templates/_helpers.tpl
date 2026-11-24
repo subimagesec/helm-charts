@@ -122,5 +122,5 @@ cannot hold.
 */}}
 {{- define "subimage-outpost.appVersion" -}}
 {{- $tag := .Values.image.tag | default "" | toString | splitList "@" | first -}}
-{{- $tag | default .Chart.AppVersion | trunc 63 | regexReplaceAll "[^A-Za-z0-9]+$" "" -}}
+{{- regexReplaceAll "[^A-Za-z0-9]+$" ($tag | default .Chart.AppVersion | trunc 63) "" -}}
 {{- end }}
