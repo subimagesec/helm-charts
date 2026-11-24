@@ -52,7 +52,7 @@ SubImage Outpost creates a secure proxy using Tailscale to access private Kubern
    - Contact SubImage support if you don't have this secret
    - **Note**: The chart automatically appends `?ephemeral=true` to ensure the Tailscale node is removed when the pod is deleted
 2. **Tenant ID** - Your tenant identifier (provided by SubImage)
-   - Example: `veriff`, `acme`, `customer-name`
+   - Example: `acme`, `customer-name`
    - Used for Tailscale hostname and ACL tags
 
 ### Quick Start
@@ -86,7 +86,7 @@ Digest references need Helm 3.17 or later. [Verify a Release](#verify-a-release)
 > **Security Note**: Always use a values file (`-f`) for sensitive data like `authKey`. Avoid passing secrets via `--set` on the command line, as they are exposed in shell history and process listings.
 
 **Important Notes:**
-- The Tailscale hostname will be: `{tenantId}-{name}-outpost` (e.g., `veriff-subimage-outpost`)
+- The Tailscale hostname will be: `{tenantId}-{name}-outpost` (e.g., `acme-subimage-outpost`)
 - The default `name` is `subimage` - only override if deploying multiple outposts for the same tenant
 
 ### Verify a Release
@@ -167,13 +167,13 @@ outpost:
 
 **How the hostname is constructed:**
 - Tailscale hostname: `{tenantId}-{name}-outpost`
-- Example: `tenantId: "veriff"`, `name: "subimage"` → hostname `veriff-subimage-outpost`
+- Example: `tenantId: "acme"`, `name: "subimage"` → hostname `acme-subimage-outpost`
 
 **Multiple outposts for the same tenant:**
 If you need to deploy multiple outposts (e.g., for different Kubernetes clusters), use different `name` values:
-- `name: "eks"` → `veriff-eks-outpost`
-- `name: "gke"` → `veriff-gke-outpost`
-- `name: "rancher"` → `veriff-rancher-outpost`
+- `name: "eks"` → `acme-eks-outpost`
+- `name: "gke"` → `acme-gke-outpost`
+- `name: "rancher"` → `acme-rancher-outpost`
 
 ### Common Configurations
 
