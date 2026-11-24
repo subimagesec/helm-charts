@@ -168,6 +168,19 @@ tolerations:
     effect: "NoSchedule"
 ```
 
+#### Cluster Autoscalers
+
+The outpost runs as a single replica, so when an autoscaler removes its node, every connection through it drops until the replacement rejoins the tailnet. By default the pod carries two annotations that stop that:
+
+- `cluster-autoscaler.kubernetes.io/safe-to-evict: "false"` for Cluster Autoscaler on EKS, GKE and AKS.
+- `karpenter.sh/do-not-disrupt: "true"` for Karpenter, including EKS Auto Mode and AKS node auto-provisioning.
+
+Node upgrades and drains still evict the pod. Karpenter also holds drift replacement of the outpost's node, so set a NodePool `terminationGracePeriod` if you rely on drift for node image updates. To turn the annotations off:
+
+```yaml
+autoscalerEvictionProtection: false
+```
+
 #### 4. Service Mesh Environments
 
 The chart automatically disables Istio and Linkerd injection via namespace labels. If you need additional exclusions:
@@ -636,6 +649,10 @@ outpost:
 ```bash
 helm upgrade my-outpost ./subimage-outpost -f my-values.yaml
 ```
+
+### Upgrading to 1.8.0
+
+- The pod now carries `cluster-autoscaler.kubernetes.io/safe-to-evict: "false"` and `karpenter.sh/do-not-disrupt: "true"`, so cluster autoscalers no longer remove the node it runs on. Set `autoscalerEvictionProtection: false` to keep the old behavior. See [Cluster Autoscalers](#cluster-autoscalers).
 
 ### Upgrading to 1.7.0
 

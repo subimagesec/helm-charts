@@ -121,6 +121,17 @@ resources:
 # clock starts when termination is requested.
 terminationGracePeriodSeconds: 60
 
+# autoscalerEvictionProtection keeps cluster autoscalers from removing the node
+# the outpost runs on. The outpost is a single replica, so a scale-in eviction
+# drops every connection through it until the replacement rejoins the tailnet.
+# It sets cluster-autoscaler.kubernetes.io/safe-to-evict: "false" (Cluster
+# Autoscaler on EKS, GKE and AKS) and karpenter.sh/do-not-disrupt: "true"
+# (Karpenter, including EKS Auto Mode and AKS node auto-provisioning). Node
+# upgrades and drains still evict the pod. Karpenter also holds drift
+# replacement of that node, so set a NodePool terminationGracePeriod if you
+# rely on drift for node image updates. A key you set in podAnnotations wins.
+autoscalerEvictionProtection: true
+
 # Network Policy configuration
 networkPolicy:
   # Enable NetworkPolicy to allow Tailscale egress
