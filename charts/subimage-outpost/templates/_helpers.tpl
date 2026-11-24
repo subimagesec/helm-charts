@@ -100,6 +100,9 @@ a digest of a different image.
 {{- $repository := required "image.repository is required" .Values.image.repository -}}
 {{- $tag := .Values.image.tag | default "" | toString -}}
 {{- $digest := .Values.image.digest | default "" | toString -}}
+{{- if and (contains "@" $tag) (not (regexMatch "@sha256:[a-f0-9]{64}$" $tag)) -}}
+{{- fail (printf "image.tag with a digest must end in @sha256:<64 hex characters> (got %q)" $tag) -}}
+{{- end -}}
 {{- if $tag -}}
 {{- printf "%s:%s" $repository $tag -}}
 {{- else if $digest -}}
@@ -119,5 +122,5 @@ cannot hold.
 */}}
 {{- define "subimage-outpost.appVersion" -}}
 {{- $tag := .Values.image.tag | default "" | toString | splitList "@" | first -}}
-{{- $tag | default .Chart.AppVersion | trunc 63 | trimSuffix "-" -}}
+{{- $tag | default .Chart.AppVersion | trunc 63 | regexReplaceAll "[^A-Za-z0-9]+$" "" -}}
 {{- end }}

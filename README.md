@@ -27,16 +27,15 @@ helm install my-outpost subimage/subimage-outpost \
 
 ### Install from the OCI Registry
 
-Starting with chart 1.7.2, each release is also published to GHCR. Install it by digest to skip the repository index (Helm 3.17 or later):
+Starting with chart 1.7.2, each release is also published to GHCR. To skip the repository index, install the chart by digest. Digest references need Helm 3.17 or later.
 
 ```bash
 helm install my-outpost \
-  oci://ghcr.io/subimagesec/charts/subimage-outpost@sha256:<digest> \
-  --set outpost.tenantId="your-tenant-id" \
-  --set outpost.authKey.value="tskey-client-xxxxx-xxxxxxxxxxxxxx"
+  oci://ghcr.io/subimagesec/charts/subimage-outpost@DIGEST \
+  -f my-values.yaml
 ```
 
-To find the digest and verify a release before you install it, see [Verify a Release](./charts/subimage-outpost/README.md#verify-a-release).
+Replace `DIGEST` with the chart's digest, including its `sha256:` prefix. To find the digest and verify a release before you install it, see [Verify a Release](./charts/subimage-outpost/README.md#verify-a-release).
 
 See the [subimage-outpost README](./charts/subimage-outpost/README.md) for detailed configuration options.
 

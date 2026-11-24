@@ -77,11 +77,11 @@ Starting with chart 1.7.2, you can also install from the OCI registry at `oci://
 
 ```bash
 helm install my-outpost \
-  oci://ghcr.io/subimagesec/charts/subimage-outpost@sha256:<digest> \
+  oci://ghcr.io/subimagesec/charts/subimage-outpost@DIGEST \
   -f my-values.yaml
 ```
 
-Digest references need Helm 3.17 or later. [Verify a Release](#verify-a-release) shows how to find and check the digest.
+Replace `DIGEST` with the chart's digest, including its `sha256:` prefix. Digest references need Helm 3.17 or later. [Verify a Release](#verify-a-release) shows how to find and check the digest.
 
 > **Security Note**: Always use a values file (`-f`) for sensitive data like `authKey`. Avoid passing secrets via `--set` on the command line, as they are exposed in shell history and process listings.
 
@@ -134,13 +134,16 @@ Print the digest of a version:
 helm pull oci://ghcr.io/subimagesec/charts/subimage-outpost --version "$VERSION"
 ```
 
-Helm prints the manifest digest on the `Digest:` line. Verify that digest:
+Helm prints the digest on the `Digest:` line. Verify that digest:
 
 ```bash
 gh attestation verify \
-  oci://ghcr.io/subimagesec/charts/subimage-outpost@sha256:<digest> \
-  -R subimagesec/helm-charts
+  oci://ghcr.io/subimagesec/charts/subimage-outpost@DIGEST \
+  -R subimagesec/helm-charts \
+  --signer-workflow subimagesec/helm-charts/.github/workflows/release.yml
 ```
+
+Replace `DIGEST` with the value from the `Digest:` line, including its `sha256:` prefix.
 
 This command proves that the release workflow in `subimagesec/helm-charts` pushed that exact chart. Install it by the same digest, as shown in [Quick Start](#quick-start). The pulled `.tgz` is also byte-for-byte the GitHub release asset, so `gh release verify-asset` accepts it.
 
@@ -487,7 +490,7 @@ By default, the chart runs the outpost version in its `appVersion` and pins it b
 image: "ghcr.io/subimagesec/subimage-outpost:1.2.5@sha256:872f84f2eff37c8b567c114cc95df79dc7657f779179b60b4820b9c975bbb7d9"
 ```
 
-`image.tag` defaults to `""`, which means the chart's `appVersion`. `image.digest` holds the digest of that image's multi-arch index. CI fails when `image.digest` differs from what the registry serves for the `appVersion` tag. To compare it yourself, check the `Digest:` line of:
+`image.tag` defaults to `""`, which means the chart's `appVersion`. `image.digest` holds the digest of that image's multi-arch index. To compare it with the registry, check the `Digest:` line of:
 
 ```bash
 docker buildx imagetools inspect ghcr.io/subimagesec/subimage-outpost:1.2.5
@@ -504,8 +507,10 @@ To pin your own version by digest, put the digest in the tag:
 
 ```yaml
 image:
-  tag: "1.2.6@sha256:<digest>"
+  tag: "1.2.6@DIGEST"
 ```
+
+Replace `DIGEST` with the image's digest, including its `sha256:` prefix.
 
 If you mirror the image to a private registry and leave `image.tag` empty, the chart pins your mirror to the same digest. A copy that keeps the multi-arch index, such as `crane copy` or `skopeo copy --all`, keeps that digest. If your mirror changes the digest, set `image.digest` to your mirror's digest, or to `""` to pull by tag.
 

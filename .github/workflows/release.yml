@@ -114,9 +114,15 @@ jobs:
               exit 1
             fi
             digest=$(sed -n 's/^Digest: //p' pull.log)
-          else
+          elif grep -q 'not found' pull.log; then
             helm push "$package" "oci://$OCI_REPOSITORY" 2>&1 | tee push.log
             digest=$(sed -n 's/^Digest: //p' push.log)
+          else
+            # Any other pull failure leaves the tag's contents unknown, and
+            # pushing could then replace different bytes.
+            cat pull.log
+            echo "::error::Could not check whether $OCI_REPOSITORY/$name:$version exists. Rerun this job."
+            exit 1
           fi
 
           if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
